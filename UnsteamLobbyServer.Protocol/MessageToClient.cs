@@ -1,5 +1,4 @@
 ﻿using JetBrains.Annotations;
-using System.Reflection;
 using System.Text;
 
 namespace UnsteamLobbyServer.Protocol;
@@ -27,7 +26,20 @@ public abstract record BaseWebsocketMessageToClient
 
     public static BaseWebsocketMessageToClient? Deserialize(Stream json)
     {
-        throw new NotImplementedException();
+        var fields = JsonHelper.ParseFields(json);
+
+        if (!fields.TryGetValue("$type", out var type))
+            return null;
+
+        return type switch
+        {
+            nameof(Pong) => new Pong(int.Parse(fields["ID"])),
+            nameof(LobbyCreated) => new LobbyCreated(ulong.Parse(fields["LobbyId"])),
+            nameof(LobbyEnter) => new LobbyEnter(
+                ulong.Parse(fields["LobbyId"]),
+                bool.Parse(fields["Success"])),
+            _ => null
+        };
     }
 }
 
@@ -63,7 +75,9 @@ public record LobbyEnter(ulong LobbyId, bool Success) : BaseWebsocketMessageToCl
 {
     protected override void SerializeSelf(StringBuilder builder)
     {
-        throw new NotImplementedException();
+        builder.AppendFormat("\"LobbyId\": {0},", LobbyId);
+        builder.AppendLine();
+        builder.AppendFormat("\"Success\": {0}", Success ? "true" : "false");
     }
 }
 
