@@ -1,0 +1,6 @@
+/.vs
+
+/UnsteamLobbyServer/bin
+/UnsteamLobbyServer/obj
+/UnsteamLobbyServer.Protocol/bin
+/UnsteamLobbyServer.Protocol/obj

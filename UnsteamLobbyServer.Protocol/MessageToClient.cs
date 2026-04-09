@@ -1,0 +1,94 @@
+﻿using JetBrains.Annotations;
+using System.Reflection;
+using System.Text;
+
+namespace UnsteamLobbyServer.Protocol;
+
+[UsedImplicitly]
+public abstract record BaseWebsocketMessageToClient
+{
+    public string Serialize()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("{");
+        
+        builder.AppendFormat("\"$type\": \"{0}\",", GetType().Name);
+        builder.AppendLine();
+
+        SerializeSelf(builder);
+        builder.AppendLine();
+
+        builder.Append("}");
+
+        return builder.ToString();
+    }
+
+    protected abstract void SerializeSelf(StringBuilder builder);
+
+    public static BaseWebsocketMessageToClient? Deserialize(Stream json)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Response to a Ping message
+/// </summary>
+/// <param name="ID"></param>
+public record Pong(int ID) : BaseWebsocketMessageToClient
+{
+    protected override void SerializeSelf(StringBuilder builder)
+    {
+        builder.AppendFormat("\"ID\": {0}", ID);
+    }
+}
+
+/// <summary>
+/// Indicates that a lobby with the given ID was created
+/// </summary>
+/// <param name="LobbyId"></param>
+public record LobbyCreated(ulong LobbyId) : BaseWebsocketMessageToClient
+{
+    protected override void SerializeSelf(StringBuilder builder)
+    {
+        builder.AppendFormat("\"LobbyId\": {0}", LobbyId);
+    }
+}
+
+/// <summary>
+/// Indicates that the user receiving this message has entered a lobby with the given ID
+/// </summary>
+/// <param name="LobbyId"></param>
+public record LobbyEnter(ulong LobbyId, bool Success) : BaseWebsocketMessageToClient
+{
+    protected override void SerializeSelf(StringBuilder builder)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+///// <summary>
+///// Indicates that a new chat message was sent in the lobby
+///// </summary>
+///// <param name="LobbyId"></param>
+///// <param name="UserId"></param>
+///// <param name="Type"></param>
+///// <param name="ChatId"></param>
+//public record LobbyChatMessage(ulong LobbyId, ulong UserId, ChatType Type, uint ChatId, byte[] Data) : BaseWebsocketMessageToClient;
+
+///// <summary>
+///// Indicates that soemthing about the lobby chat has updated (e.g. user joined or left)
+///// </summary>
+///// <param name="LobbyId"></param>
+///// <param name="UserChangedId"></param>
+///// <param name="UserMakingChangeId"></param>
+///// <param name="State"></param>
+//public record LobbyChatUpdate(ulong LobbyId, ulong UserChangedId, ulong UserMakingChangeId, ChatMemberStateChange State) : BaseWebsocketMessageToClient;
+
+///// <summary>
+///// Indicates that lobby data has updated
+///// </summary>
+///// <param name="LobbyId"></param>
+///// <param name="UserId">Either the ID of the user who the data was updated for, or the lobby ID if the lobby data was updated</param>
+///// <param name="Success"></param>
+//public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success) : BaseWebsocketMessageToClient;

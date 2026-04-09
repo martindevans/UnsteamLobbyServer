@@ -1,0 +1,6 @@
+@UnsteamLobbyServer_HostAddress = http://localhost:5030
+
+GET {{UnsteamLobbyServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

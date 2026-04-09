@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="UnsteamLobbyServer.Protocol/UnsteamLobbyServer.Protocol.csproj" />
+  <Project Path="UnsteamLobbyServer/UnsteamLobbyServer.csproj" />
+</Solution>
