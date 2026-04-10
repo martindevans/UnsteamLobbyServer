@@ -34,56 +34,16 @@ public abstract record BaseWebsocketMessageToServer
         switch (type)
         {
             case nameof(Ping):
-            {
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("ID")) return null;
-                var idStr = reader.ReadUnquotedValue();
-                if (idStr == null || !int.TryParse(idStr, out var id)) return null;
-                return new Ping(id);
-            }
+                return Ping.DeserializeSelf(ref reader);
 
             case nameof(CreateLobby):
-            {
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("Owner")) return null;
-                var ownerStr = reader.ReadUnquotedValue();
-                if (ownerStr == null || !ulong.TryParse(ownerStr, out var owner)) return null;
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("Visibility")) return null;
-                var visibilityStr = reader.ReadString();
-                if (visibilityStr == null || !Enum.TryParse<LobbyVisibility>(visibilityStr, out var visibility)) return null;
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("MaxMembers")) return null;
-                var maxMembersStr = reader.ReadUnquotedValue();
-                if (maxMembersStr == null || !byte.TryParse(maxMembersStr, out var maxMembers)) return null;
-                return new CreateLobby(owner, visibility, maxMembers);
-            }
+                return CreateLobby.DeserializeSelf(ref reader);
 
             case nameof(JoinLobby):
-            {
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("LobbyId")) return null;
-                var lobbyIdStr = reader.ReadUnquotedValue();
-                if (lobbyIdStr == null || !ulong.TryParse(lobbyIdStr, out var lobbyId)) return null;
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("UserId")) return null;
-                var userIdStr = reader.ReadUnquotedValue();
-                if (userIdStr == null || !ulong.TryParse(userIdStr, out var userId)) return null;
-                return new JoinLobby(lobbyId, userId);
-            }
+                return JoinLobby.DeserializeSelf(ref reader);
 
             case nameof(LeaveLobby):
-            {
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("LobbyId")) return null;
-                var lobbyIdStr = reader.ReadUnquotedValue();
-                if (lobbyIdStr == null || !ulong.TryParse(lobbyIdStr, out var lobbyId)) return null;
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("UserId")) return null;
-                var userIdStr = reader.ReadUnquotedValue();
-                if (userIdStr == null || !ulong.TryParse(userIdStr, out var userId)) return null;
-                return new LeaveLobby(lobbyId, userId);
-            }
+                return LeaveLobby.DeserializeSelf(ref reader);
 
             default:
                 return null;
@@ -97,6 +57,21 @@ public record Ping(int ID) : BaseWebsocketMessageToServer
     {
         builder.AppendFormat("\"ID\": {0}", ID);
     }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("ID"))
+            return null;
+
+        var id = reader.ReadInt32();
+        if (!id.HasValue)
+            return null;
+
+        return new Ping(id.Value);
+    }
 }
 
 public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembers) : BaseWebsocketMessageToServer
@@ -109,6 +84,41 @@ public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembe
         builder.AppendLine();
         builder.AppendFormat("\"MaxMembers\": {0}", MaxMembers);
     }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("Owner"))
+            return null;
+
+        var owner = reader.ReadUInt64();
+        if (!owner.HasValue)
+            return null;
+
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("Visibility"))
+            return null;
+
+        var visibilityStr = reader.ReadString();
+        if (visibilityStr == null || !Enum.TryParse<LobbyVisibility>(visibilityStr, out var visibility))
+            return null;
+
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("MaxMembers"))
+            return null;
+
+        var maxMembersStr = reader.ReadUnquotedValue();
+        if (maxMembersStr == null || !byte.TryParse(maxMembersStr, out var maxMembers))
+            return null;
+
+        return new CreateLobby(owner.Value, visibility, maxMembers);
+    }
 }
 
 public record JoinLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToServer
@@ -119,6 +129,31 @@ public record JoinLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToSer
         builder.AppendLine();
         builder.AppendFormat("\"UserId\": {0}", UserId);
     }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("LobbyId"))
+            return null;
+
+        var lobbyId = reader.ReadUInt64();
+        if (!lobbyId.HasValue)
+            return null;
+
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("UserId"))
+            return null;
+
+        var userId = reader.ReadUInt64();
+        if (!userId.HasValue)
+            return null;
+
+        return new JoinLobby(lobbyId.Value, userId.Value);
+    }
 }
 
 public record LeaveLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToServer
@@ -128,5 +163,30 @@ public record LeaveLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToSe
         builder.AppendFormat("\"LobbyId\": {0},", LobbyId);
         builder.AppendLine();
         builder.AppendFormat("\"UserId\": {0}", UserId);
+    }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("LobbyId"))
+            return null;
+
+        var lobbyId = reader.ReadUInt64();
+        if (!lobbyId.HasValue)
+            return null;
+
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("UserId"))
+            return null;
+
+        var userId = reader.ReadUInt64();
+        if (!userId.HasValue)
+            return null;
+
+        return new LeaveLobby(lobbyId.Value, userId.Value);
     }
 }
