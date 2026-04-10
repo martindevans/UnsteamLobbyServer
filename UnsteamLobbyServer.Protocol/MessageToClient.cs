@@ -1,10 +1,8 @@
 ﻿using HandySerialization;
 using HandySerialization.Extensions;
-using JetBrains.Annotations;
 
 namespace UnsteamLobbyServer.Protocol;
 
-[UsedImplicitly]
 public abstract record BaseWebsocketMessageToClient
 {
     public void Serialize<TWriter>(ref TWriter writer)
