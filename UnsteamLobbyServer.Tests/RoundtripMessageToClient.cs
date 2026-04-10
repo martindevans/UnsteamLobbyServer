@@ -28,16 +28,41 @@ public sealed class RoundtripMessageToClient
     [TestMethod]
     public void LobbyEnter_Success_Roundtrip()
     {
-        var original = new LobbyEnter(LobbyId: 333444555UL, Success: true);
-        var deserialized = BaseWebsocketMessageToClient.Deserialize(original.Serialize().AsMemory());
-        Assert.AreEqual(original, deserialized);
+        var original = new LobbyEnter(
+            LobbyId: 333444555UL,
+            Success: true,
+            new KeyValuePair<string, string>[]
+            {
+                new("Hello", "World"),
+                new("Goodbye", "Planet"),
+            },
+            new KeyValuePair<(ulong, string), string>[]
+            {
+                new((1142, "Hello"), "World"),
+                new((46345354567, "Goodbye"), "Planet"),
+            }
+        );
+        
+        var deserialized = (LobbyEnter?)BaseWebsocketMessageToClient.Deserialize(original.Serialize().AsMemory())!;
+        Assert.IsNotNull(deserialized);
+        
+        Assert.AreEqual(original.LobbyId, deserialized.LobbyId);
+        Assert.AreEqual(original.Success, deserialized.Success);
+        CollectionAssert.AreEqual(original.LobbyData.ToArray(), deserialized.LobbyData.ToArray());
+        CollectionAssert.AreEqual(original.LobbyMemberData.ToArray(), deserialized.LobbyMemberData.ToArray());
     }
 
     [TestMethod]
     public void LobbyEnter_Failure_Roundtrip()
     {
-        var original = new LobbyEnter(LobbyId: 333444555UL, Success: false);
-        var deserialized = BaseWebsocketMessageToClient.Deserialize(original.Serialize().AsMemory());
-        Assert.AreEqual(original, deserialized);
+        var original = new LobbyEnter(LobbyId: 333444555UL, Success: false, [], []);
+        
+        var deserialized = (LobbyEnter?)BaseWebsocketMessageToClient.Deserialize(original.Serialize().AsMemory());
+        Assert.IsNotNull(deserialized);
+        
+        Assert.AreEqual(original.LobbyId, deserialized.LobbyId);
+        Assert.AreEqual(original.Success, deserialized.Success);
+        CollectionAssert.AreEqual(original.LobbyData.ToArray(), deserialized.LobbyData.ToArray());
+        CollectionAssert.AreEqual(original.LobbyMemberData.ToArray(), deserialized.LobbyMemberData.ToArray());
     }
 }

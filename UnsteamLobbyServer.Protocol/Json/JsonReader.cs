@@ -41,6 +41,18 @@ internal struct JsonReader
         return TryReadCharacter('}');
     }
 
+    public bool ReadArrayStart()
+    {
+        SkipWhitespace();
+        return TryReadCharacter('[');
+    }
+
+    public bool ReadEndArray()
+    {
+        SkipWhitespace();
+        return TryReadCharacter(']');
+    }
+
     public bool ReadComma()
     {
         SkipWhitespace();
@@ -59,6 +71,22 @@ internal struct JsonReader
 
         if (!TryReadCharacter('"'))
             return false;
+
+        SkipWhitespace();
+        if (!TryReadCharacter(':'))
+            return false;
+
+        return true;
+    }
+
+    public bool ReadPropertyName(out string name)
+    {
+        SkipWhitespace();
+
+        if (!ReadString(out name))
+        {
+            return false;
+        }
 
         SkipWhitespace();
         if (!TryReadCharacter(':'))
@@ -238,6 +266,96 @@ internal struct JsonReader
 
         if (!ReadString(out value))
             return false;
+
+        if (!ReadComma())
+            return false;
+
+        return true;
+    }
+    
+    public bool ReadPropertyLobbyData(string name, out IReadOnlyList<KeyValuePair<string, string>> results)
+    {
+        if (!ReadPropertyName(name))
+        {
+            results = default!;
+            return false;
+        }
+
+        if (!ReadObjectStart())
+        {
+            results = default!;
+            return false;
+        }
+        
+        var innerResults = new List<KeyValuePair<string, string>>();
+        results = innerResults;
+        while (!ReadEndObject())
+        {
+            if (!ReadPropertyName(out var key))
+                return false;
+
+            if (!ReadString(out var value))
+                return false;
+
+            if (!ReadComma())
+                return false;
+            
+            innerResults.Add(new KeyValuePair<string, string>(key, value));
+        }
+
+        if (!ReadComma())
+            return false;
+
+        return true;
+    }
+
+    public bool ReadPropertyLobbyMemberData(string name, out IReadOnlyList<KeyValuePair<(ulong, string), string>> results)
+    {
+        // name: [
+        //   [ uid, key, val ],
+        //   [ uid, key, val ],
+        //   [ uid, key, val ],
+        //   etc
+        // ]
+
+        if (!ReadPropertyName(name))
+        {
+            results = default!;
+            return false;
+        }
+
+        if (!ReadArrayStart())
+        {
+            results = default!;
+            return false;
+        }
+
+        var innerResults = new List<KeyValuePair<(ulong, string), string>>();
+        results = innerResults;
+        
+        while (!ReadEndArray())
+        {
+            if (!ReadArrayStart())
+                return false;
+            {
+                if (!ReadUInt64(out var uid))
+                    return false;
+                if (!ReadComma())
+                    return false;
+
+                if (!ReadString(out var key))
+                    return false;
+                if (!ReadComma())
+                    return false;
+
+                if (!ReadString(out var value))
+                    return false;
+
+                innerResults.Add(new KeyValuePair<(ulong, string), string>((uid, key), value));
+            }
+            if (!ReadEndArray())
+                return false;
+        }
 
         if (!ReadComma())
             return false;

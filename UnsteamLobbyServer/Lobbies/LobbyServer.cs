@@ -164,7 +164,14 @@ public partial class LobbyServer
             case JoinLobby jl:
             {
                 var ok = await _manager.Join(jl.LobbyId, jl.UserId);
-                await Reply(new LobbyEnter(jl.LobbyId, ok));
+                await Reply(
+                    new LobbyEnter(
+                        jl.LobbyId,
+                        ok,
+                        _manager.GetLobbyData(jl.LobbyId),
+                        _manager.GetLobbyMemberData(jl.LobbyId)
+                    )
+                );
                 break;
             }
 

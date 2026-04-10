@@ -101,13 +101,16 @@ public record LobbyCreated(ulong LobbyId)
 /// Indicates that the user receiving this message has entered a lobby with the given ID
 /// </summary>
 /// <param name="LobbyId"></param>
-public record LobbyEnter(ulong LobbyId, bool Success)
+public record LobbyEnter(ulong LobbyId, bool Success, IReadOnlyList<KeyValuePair<string, string>> LobbyData, IReadOnlyList<KeyValuePair<(ulong, string), string>> LobbyMemberData)
     : BaseWebsocketMessageToClient
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
         writer.WriteProperty(nameof(LobbyId), LobbyId);
         writer.WriteProperty(nameof(Success), Success);
+        
+        writer.WriteProperty(nameof(LobbyData), LobbyData);
+        writer.WriteProperty(nameof(LobbyMemberData), LobbyMemberData);
     }
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
@@ -116,8 +119,12 @@ public record LobbyEnter(ulong LobbyId, bool Success)
             return null;
         if (!reader.ReadPropertyBool(nameof(Success), out var success))
             return null;
+        if (!reader.ReadPropertyLobbyData(nameof(LobbyData), out var ldata))
+            return null;
+        if (!reader.ReadPropertyLobbyMemberData(nameof(LobbyMemberData), out var lmdata))
+            return null;
 
-        return new LobbyEnter(lobbyId, success);
+        return new LobbyEnter(lobbyId, success, ldata, lmdata);
     }
 }
 
