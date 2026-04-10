@@ -1,7 +1,7 @@
 namespace UnsteamLobbyServer.Protocol;
 
 
-public struct JsonWriter
+public readonly struct JsonWriter
 {
     private readonly System.Text.StringBuilder _builder;
 
@@ -37,7 +37,7 @@ public struct JsonWriter
         _builder.Append('"');
         foreach (var c in value)
         {
-            if (c == '"' || c == '\\')
+            if (c is '"' or '\\')
                 _builder.Append('\\');
             _builder.Append(c);
         }

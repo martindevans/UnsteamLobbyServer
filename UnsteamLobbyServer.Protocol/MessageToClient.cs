@@ -37,27 +37,21 @@ public abstract record BaseWebsocketMessageToClient
         if (!reader.ReadObjectStart())
             return null;
         
-        // "$type": "whatever"
+        // "$type": "whatever",
         if (!reader.ReadPropertyName("$type"))
             return null;
-        var type = reader.ReadString();
-        if (type == null)
+        if (!reader.ReadString(out var type))
+            return null;
+        if (!reader.ReadComma())
             return null;
 
-        switch (type)
+        return type switch
         {
-            case nameof(Pong):
-                return Pong.DeserializeSelf(ref reader);
-
-            case nameof(LobbyCreated):
-                return LobbyCreated.DeserializeSelf(ref reader);
-
-            case nameof(LobbyEnter):
-                return LobbyEnter.DeserializeSelf(ref reader);
-
-            default:
-                return null;
-        }
+            nameof(Pong) => Pong.DeserializeSelf(ref reader),
+            nameof(LobbyCreated) => LobbyCreated.DeserializeSelf(ref reader),
+            nameof(LobbyEnter) => LobbyEnter.DeserializeSelf(ref reader),
+            _ => null
+        };
     }
 }
 
@@ -76,17 +70,11 @@ public record Pong(int ID)
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadComma())
+        if (!reader.ReadPropertyName("ID")
+         || !reader.ReadInt32(out var id))
             return null;
         
-        if (!reader.ReadPropertyName("ID"))
-            return null;
-        
-        var id = reader.ReadInt32();
-        if (!id.HasValue)
-            return null;
-        
-        return new Pong(id.Value);
+        return new Pong(id);
     }
 }
 
@@ -94,7 +82,8 @@ public record Pong(int ID)
 /// Indicates that a lobby with the given ID was created
 /// </summary>
 /// <param name="LobbyId"></param>
-public record LobbyCreated(ulong LobbyId) : BaseWebsocketMessageToClient
+public record LobbyCreated(ulong LobbyId)
+    : BaseWebsocketMessageToClient
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
@@ -104,17 +93,11 @@ public record LobbyCreated(ulong LobbyId) : BaseWebsocketMessageToClient
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadComma())
-            return null;
+        if (!reader.ReadPropertyName("LobbyId")
+         || !reader.ReadUInt64(out var lobbyId))
+             return null;
 
-        if (!reader.ReadPropertyName("LobbyId"))
-            return null;
-
-        var lobbyId = reader.ReadUInt64();
-        if (!lobbyId.HasValue)
-            return null;
-
-        return new LobbyCreated(lobbyId.Value);
+        return new LobbyCreated(lobbyId);
     }
 }
 
@@ -122,7 +105,8 @@ public record LobbyCreated(ulong LobbyId) : BaseWebsocketMessageToClient
 /// Indicates that the user receiving this message has entered a lobby with the given ID
 /// </summary>
 /// <param name="LobbyId"></param>
-public record LobbyEnter(ulong LobbyId, bool Success) : BaseWebsocketMessageToClient
+public record LobbyEnter(ulong LobbyId, bool Success)
+    : BaseWebsocketMessageToClient
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
@@ -135,27 +119,14 @@ public record LobbyEnter(ulong LobbyId, bool Success) : BaseWebsocketMessageToCl
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadComma())
-            return null;
+        if (!reader.ReadPropertyName("LobbyId")
+         || !reader.ReadUInt64(out var lobbyId)
+         || !reader.ReadComma()
+         || !reader.ReadPropertyName("Success")
+         || !reader.ReadBool(out var success))
+             return null;
 
-        if (!reader.ReadPropertyName("LobbyId"))
-            return null;
-
-        var lobbyId = reader.ReadUInt64();
-        if (!lobbyId.HasValue)
-            return null;
-
-        if (!reader.ReadComma())
-            return null;
-
-        if (!reader.ReadPropertyName("Success"))
-            return null;
-
-        var success = reader.ReadBool();
-        if (!success.HasValue)
-            return null;
-
-        return new LobbyEnter(lobbyId.Value, success.Value);
+        return new LobbyEnter(lobbyId, success);
     }
 }
 

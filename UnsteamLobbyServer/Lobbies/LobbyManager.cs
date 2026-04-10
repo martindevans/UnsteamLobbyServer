@@ -7,7 +7,7 @@ public class LobbyManager
     private readonly Lock _lock = new();
     
     private readonly Random _random = new();
-    private readonly Dictionary<ulong, Lobby> _lobbies = new();
+    private readonly Dictionary<ulong, Lobby> _lobbies = [ ];
 
     //todo: hook up events and send messages to clients
     public event Action<LobbyCreatedEventData>? LobbyCreated;
@@ -253,6 +253,6 @@ public class LobbyManager
     /// <param name="ChangedUserId">ID of user being changed</param>
     /// <param name="ChangingUserId">ID of user making change, may be different fro Changed if e.g. banning or kicking</param>
     /// <param name="state">The state being changed</param>
-    public record LobbyChatUpdateEvent(ulong LobbyId, ulong ChangedUserId, ulong ChangingUserId, ChatMemberStateChange state);
+    public record LobbyChatUpdateEvent(ulong LobbyId, ulong ChangedUserId, ulong ChangingUserId, ChatMemberStateChange State);
     #endregion
 }

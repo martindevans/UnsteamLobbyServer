@@ -69,11 +69,14 @@ internal struct JsonReader
         return true;
     }
 
-    public string? ReadString()
+    public bool ReadString(out string value)
     {
         SkipWhitespace();
         if (!TryReadCharacter('"'))
-            return null;
+        {
+            value = default!;
+            return false;
+        }
 
         var start = _index;
         while (_index < _json.Length && _json[_index] != '"')
@@ -84,50 +87,75 @@ internal struct JsonReader
         }
 
         if (_index >= _json.Length)
-            return null;
+        {
+            value = default!;
+            return false;
+        }
 
-        var value = _json[start.._index];
+        value = _json[start.._index];
         _index++; // consume closing quote
-        return value;
+        return true;
     }
 
-    public string? ReadUnquotedValue()
+    public bool ReadUnquotedValue(out string value)
     {
         SkipWhitespace();
+        
         var start = _index;
-        while (_index < _json.Length && _json[_index] != ',' && _json[_index] != '}')
+        while (_index < _json.Length && _json[_index] != ',' && _json[_index] != '}' && _json[_index] != ' ')
             _index++;
 
         if (_index == start)
-            return null;
+        {
+            value = "";
+            return true;
+        }
 
-        return _json[start.._index].TrimEnd();
+        value = _json[start.._index].TrimEnd();
+        return true;
     }
 
-    public int? ReadInt32()
+    public bool ReadByte(out byte value)
     {
-        var str = ReadUnquotedValue();
-        if (str == null || !int.TryParse(str, out var value))
-            return null;
+        if (!ReadUnquotedValue(out var str) || !byte.TryParse(str, out value))
+        {
+            value = default;
+            return false;
+        }
 
-        return value;
+        return true;
     }
 
-    public ulong? ReadUInt64()
+    public bool ReadInt32(out int value)
     {
-        var str = ReadUnquotedValue();
-        if (str == null || !ulong.TryParse(str, out var value))
-            return null;
+        if (!ReadUnquotedValue(out var str) || !int.TryParse(str, out value))
+        {
+            value = default;
+            return false;
+        }
 
-        return value;
+        return true;
     }
 
-    public bool? ReadBool()
+    public bool ReadUInt64(out ulong value)
     {
-        var str = ReadUnquotedValue();
-        if (str == null || !bool.TryParse(str, out var value))
-            return null;
+        if (!ReadUnquotedValue(out var str) || !ulong.TryParse(str, out value))
+        {
+            value = default;
+            return false;
+        }
 
-        return value;
+        return true;
+    }
+
+    public bool ReadBool(out bool value)
+    {
+        if (!ReadUnquotedValue(out var str) || !bool.TryParse(str, out value))
+        {
+            value = default;
+            return false;
+        }
+
+        return true;
     }
 }

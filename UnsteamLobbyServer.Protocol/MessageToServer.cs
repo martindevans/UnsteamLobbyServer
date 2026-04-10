@@ -31,32 +31,29 @@ public abstract record BaseWebsocketMessageToServer
     {
         var reader = new JsonReader(json);
 
-        if (!reader.ReadObjectStart()) return null;
-        if (!reader.ReadPropertyName("$type")) return null;
-        var type = reader.ReadString();
-        if (type == null) return null;
+        if (!reader.ReadObjectStart())
+            return null;
+        if (!reader.ReadPropertyName("$type"))
+            return null;
+        if (!reader.ReadString(out var type))
+            return null;
 
-        switch (type)
+        if (!reader.ReadComma())
+            return null;
+
+        return type switch
         {
-            case nameof(Ping):
-                return Ping.DeserializeSelf(ref reader);
-
-            case nameof(CreateLobby):
-                return CreateLobby.DeserializeSelf(ref reader);
-
-            case nameof(JoinLobby):
-                return JoinLobby.DeserializeSelf(ref reader);
-
-            case nameof(LeaveLobby):
-                return LeaveLobby.DeserializeSelf(ref reader);
-
-            default:
-                return null;
-        }
+            nameof(Ping) => Ping.DeserializeSelf(ref reader),
+            nameof(CreateLobby) => CreateLobby.DeserializeSelf(ref reader),
+            nameof(JoinLobby) => JoinLobby.DeserializeSelf(ref reader),
+            nameof(LeaveLobby) => LeaveLobby.DeserializeSelf(ref reader),
+            _ => null
+        };
     }
 }
 
-public record Ping(int ID) : BaseWebsocketMessageToServer
+public record Ping(int ID)
+    : BaseWebsocketMessageToServer
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
@@ -66,21 +63,16 @@ public record Ping(int ID) : BaseWebsocketMessageToServer
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadComma())
+        if (!reader.ReadPropertyName("ID")
+         || !reader.ReadInt32(out var id))
             return null;
 
-        if (!reader.ReadPropertyName("ID"))
-            return null;
-
-        var id = reader.ReadInt32();
-        if (!id.HasValue)
-            return null;
-
-        return new Ping(id.Value);
+        return new Ping(id);
     }
 }
 
-public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembers) : BaseWebsocketMessageToServer
+public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembers)
+    : BaseWebsocketMessageToServer
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
@@ -96,41 +88,23 @@ public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembe
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadComma())
-            return null;
+        if (!reader.ReadPropertyName("Owner")
+         || !reader.ReadUInt64(out var owner)
+         || !reader.ReadComma()
+         || !reader.ReadPropertyName("Visibility")
+         || !reader.ReadString(out var visibilityStr)
+         || !Enum.TryParse<LobbyVisibility>(visibilityStr, out var visibility)
+         || !reader.ReadComma()
+         || !reader.ReadPropertyName("MaxMembers")
+         || !reader.ReadByte(out var maxMembers))
+             return null;
 
-        if (!reader.ReadPropertyName("Owner"))
-            return null;
-
-        var owner = reader.ReadUInt64();
-        if (!owner.HasValue)
-            return null;
-
-        if (!reader.ReadComma())
-            return null;
-
-        if (!reader.ReadPropertyName("Visibility"))
-            return null;
-
-        var visibilityStr = reader.ReadString();
-        if (visibilityStr == null || !Enum.TryParse<LobbyVisibility>(visibilityStr, out var visibility))
-            return null;
-
-        if (!reader.ReadComma())
-            return null;
-
-        if (!reader.ReadPropertyName("MaxMembers"))
-            return null;
-
-        var maxMembersStr = reader.ReadUnquotedValue();
-        if (maxMembersStr == null || !byte.TryParse(maxMembersStr, out var maxMembers))
-            return null;
-
-        return new CreateLobby(owner.Value, visibility, maxMembers);
+        return new CreateLobby(owner, visibility, maxMembers);
     }
 }
 
-public record JoinLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToServer
+public record JoinLobby(ulong LobbyId, ulong UserId)
+    : BaseWebsocketMessageToServer
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
@@ -143,31 +117,19 @@ public record JoinLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToSer
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadComma())
-            return null;
+        if (!reader.ReadPropertyName("LobbyId")
+         || !reader.ReadUInt64(out var lobbyId)
+         || !reader.ReadComma()
+         || !reader.ReadPropertyName("UserId")
+         || !reader.ReadUInt64(out var userId))
+             return null;
 
-        if (!reader.ReadPropertyName("LobbyId"))
-            return null;
-
-        var lobbyId = reader.ReadUInt64();
-        if (!lobbyId.HasValue)
-            return null;
-
-        if (!reader.ReadComma())
-            return null;
-
-        if (!reader.ReadPropertyName("UserId"))
-            return null;
-
-        var userId = reader.ReadUInt64();
-        if (!userId.HasValue)
-            return null;
-
-        return new JoinLobby(lobbyId.Value, userId.Value);
+        return new JoinLobby(lobbyId, userId);
     }
 }
 
-public record LeaveLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToServer
+public record LeaveLobby(ulong LobbyId, ulong UserId)
+    : BaseWebsocketMessageToServer
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
@@ -180,26 +142,13 @@ public record LeaveLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToSe
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadComma())
-            return null;
+        if (!reader.ReadPropertyName("LobbyId")
+         || !reader.ReadUInt64(out var lobbyId)
+         || !reader.ReadComma()
+         || !reader.ReadPropertyName("UserId")
+         || !reader.ReadUInt64(out var userId))
+             return null;
 
-        if (!reader.ReadPropertyName("LobbyId"))
-            return null;
-
-        var lobbyId = reader.ReadUInt64();
-        if (!lobbyId.HasValue)
-            return null;
-
-        if (!reader.ReadComma())
-            return null;
-
-        if (!reader.ReadPropertyName("UserId"))
-            return null;
-
-        var userId = reader.ReadUInt64();
-        if (!userId.HasValue)
-            return null;
-
-        return new LeaveLobby(lobbyId.Value, userId.Value);
+        return new LeaveLobby(lobbyId, userId);
     }
 }
