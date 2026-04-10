@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.IO;
 using System.Text.RegularExpressions;
 
 namespace UnsteamLobbyServer.Protocol;
@@ -23,5 +21,49 @@ internal static class JsonHelper
             result[key] = value;
         }
         return result;
+    }
+}
+
+internal struct JsonReader
+{
+    private readonly string _json;
+    private int _index;
+
+    public JsonReader(string json)
+    {
+        _json = json;
+    }
+
+    private bool ReadCharacter(char character)
+    {
+        return _json[_index] == character;
+    }
+    
+    public bool ReadObjectStart()
+    {
+        return ReadCharacter('{');
+    }
+
+    public bool ReadEndObject()
+    {
+        return ReadCharacter('}');
+    }
+
+    public bool ReadPropertyName(string name)
+    {
+        if (!ReadCharacter('"'))
+            return false;
+        
+        for (var i = 0; i < name.Length; i++)
+            if (!ReadCharacter(name[i]))
+                return false;
+
+        if (!ReadCharacter('"'))
+            return false;
+
+        if (!ReadCharacter(':'))
+            return false;
+
+        return true;
     }
 }
