@@ -7,20 +7,25 @@ public abstract record BaseWebsocketMessageToServer
     public string Serialize()
     {
         var builder = new StringBuilder();
-        builder.AppendLine("{");
+        var writer = new JsonWriter(builder);
 
-        builder.AppendFormat("\"$type\": \"{0}\",", GetType().Name);
+        writer.WriteObjectStart();
         builder.AppendLine();
 
-        SerializeSelf(builder);
+        writer.WritePropertyName("$type");
+        writer.WriteString(GetType().Name);
+        writer.WriteComma();
         builder.AppendLine();
 
-        builder.Append("}");
+        SerializeSelf(ref writer);
+        builder.AppendLine();
+
+        writer.WriteObjectEnd();
 
         return builder.ToString();
     }
 
-    protected abstract void SerializeSelf(StringBuilder builder);
+    protected abstract void SerializeSelf(ref JsonWriter writer);
 
     public static BaseWebsocketMessageToServer? Deserialize(Stream json)
     {
@@ -53,9 +58,10 @@ public abstract record BaseWebsocketMessageToServer
 
 public record Ping(int ID) : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(StringBuilder builder)
+    protected override void SerializeSelf(ref JsonWriter writer)
     {
-        builder.AppendFormat("\"ID\": {0}", ID);
+        writer.WritePropertyName("ID");
+        writer.WriteInt32(ID);
     }
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
@@ -76,13 +82,16 @@ public record Ping(int ID) : BaseWebsocketMessageToServer
 
 public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembers) : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(StringBuilder builder)
+    protected override void SerializeSelf(ref JsonWriter writer)
     {
-        builder.AppendFormat("\"Owner\": {0},", Owner);
-        builder.AppendLine();
-        builder.AppendFormat("\"Visibility\": \"{0}\",", Visibility);
-        builder.AppendLine();
-        builder.AppendFormat("\"MaxMembers\": {0}", MaxMembers);
+        writer.WritePropertyName("Owner");
+        writer.WriteUInt64(Owner);
+        writer.WriteComma();
+        writer.WritePropertyName("Visibility");
+        writer.WriteString(Visibility.ToString());
+        writer.WriteComma();
+        writer.WritePropertyName("MaxMembers");
+        writer.WriteInt32(MaxMembers);
     }
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
@@ -123,11 +132,13 @@ public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembe
 
 public record JoinLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(StringBuilder builder)
+    protected override void SerializeSelf(ref JsonWriter writer)
     {
-        builder.AppendFormat("\"LobbyId\": {0},", LobbyId);
-        builder.AppendLine();
-        builder.AppendFormat("\"UserId\": {0}", UserId);
+        writer.WritePropertyName("LobbyId");
+        writer.WriteUInt64(LobbyId);
+        writer.WriteComma();
+        writer.WritePropertyName("UserId");
+        writer.WriteUInt64(UserId);
     }
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
@@ -158,11 +169,13 @@ public record JoinLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToSer
 
 public record LeaveLobby(ulong LobbyId, ulong UserId) : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(StringBuilder builder)
+    protected override void SerializeSelf(ref JsonWriter writer)
     {
-        builder.AppendFormat("\"LobbyId\": {0},", LobbyId);
-        builder.AppendLine();
-        builder.AppendFormat("\"UserId\": {0}", UserId);
+        writer.WritePropertyName("LobbyId");
+        writer.WriteUInt64(LobbyId);
+        writer.WriteComma();
+        writer.WritePropertyName("UserId");
+        writer.WriteUInt64(UserId);
     }
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
