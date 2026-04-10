@@ -20,7 +20,7 @@ public sealed class RoundtripMessageToClient
     [TestMethod]
     public void LobbyCreated_Roundtrip()
     {
-        var original = new LobbyCreated(888777666UL);
+        var original = new LobbyCreated(5678);
         var deserialized = BaseWebsocketMessageToClient.Deserialize(original.Serialize().AsMemory());
         Assert.AreEqual(original, deserialized);
     }

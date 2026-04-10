@@ -11,6 +11,7 @@ public partial class LobbyServer
     private readonly ILogger<LobbyServer> _logger;
         
     private readonly LobbyManager _manager;
+    
     private readonly ConcurrentDictionary<WebSocket, byte> _connections = new();
 
     public LobbyServer(ILogger<LobbyServer> logger)
@@ -18,7 +19,23 @@ public partial class LobbyServer
         _logger = logger;
         _manager = new LobbyManager();
     }
-        
+
+    #region event handlers
+    private async ValueTask Broadcast<TMessage>(TMessage message)
+        where TMessage : BaseWebsocketMessageToClient
+    {
+        foreach (var connection in _connections.Keys)
+        {
+            await connection.SendAsync(
+                Encoding.UTF8.GetBytes(message.Serialize()),
+                WebSocketMessageType.Text,
+                WebSocketMessageFlags.EndOfMessage,
+                CancellationToken.None
+            );
+        }
+    }
+    #endregion
+
     public async Task Connect(HttpContext ctx)
     {
         // Sanity check that this is a websocket request
@@ -113,21 +130,21 @@ public partial class LobbyServer
 
             case CreateLobby cl:
             {
-                var id = _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
+                var id = await _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
                 await Reply(new LobbyCreated(id));
                 break;
             }
 
             case JoinLobby jl:
             {
-                var ok = _manager.Join(jl.LobbyId, jl.UserId);
+                var ok = await _manager.Join(jl.LobbyId, jl.UserId);
                 await Reply(new LobbyEnter(jl.LobbyId, ok));
                 break;
             }
 
             case LeaveLobby ll:
             {
-                _manager.Leave(ll.LobbyId, ll.UserId);
+                await _manager.Leave(ll.LobbyId, ll.UserId);
                 break;
             }
 
