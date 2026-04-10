@@ -35,7 +35,12 @@ public struct JsonWriter
     public void WriteString(string value)
     {
         _builder.Append('"');
-        _builder.Append(value);
+        foreach (var c in value)
+        {
+            if (c == '"' || c == '\\')
+                _builder.Append('\\');
+            _builder.Append(c);
+        }
         _builder.Append('"');
     }
 
