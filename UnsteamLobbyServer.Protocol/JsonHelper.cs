@@ -34,36 +34,77 @@ internal struct JsonReader
         _json = json;
     }
 
-    private bool ReadCharacter(char character)
+    private bool TryReadCharacter(char character)
     {
-        return _json[_index] == character;
+        if (_index >= _json.Length || _json[_index] != character)
+            return false;
+        _index++;
+        return true;
     }
-    
+
     public bool ReadObjectStart()
     {
-        return ReadCharacter('{');
+        return TryReadCharacter('{');
     }
 
     public bool ReadEndObject()
     {
-        return ReadCharacter('}');
+        return TryReadCharacter('}');
+    }
+
+    public bool ReadComma()
+    {
+        return TryReadCharacter(',');
     }
 
     public bool ReadPropertyName(string name)
     {
-        if (!ReadCharacter('"'))
+        if (!TryReadCharacter('"'))
             return false;
-        
+
         for (var i = 0; i < name.Length; i++)
-            if (!ReadCharacter(name[i]))
+            if (!TryReadCharacter(name[i]))
                 return false;
 
-        if (!ReadCharacter('"'))
+        if (!TryReadCharacter('"'))
             return false;
 
-        if (!ReadCharacter(':'))
+        if (!TryReadCharacter(':'))
             return false;
 
         return true;
+    }
+
+    public string? ReadString()
+    {
+        if (!TryReadCharacter('"'))
+            return null;
+
+        var start = _index;
+        while (_index < _json.Length && _json[_index] != '"')
+        {
+            if (_json[_index] == '\\')
+                _index++; // skip escaped character
+            _index++;
+        }
+
+        if (_index >= _json.Length)
+            return null;
+
+        var value = _json[start.._index];
+        _index++; // consume closing quote
+        return value;
+    }
+
+    public string? ReadUnquotedValue()
+    {
+        var start = _index;
+        while (_index < _json.Length && _json[_index] != ',' && _json[_index] != '}')
+            _index++;
+
+        if (_index == start)
+            return null;
+
+        return _json[start.._index];
     }
 }
