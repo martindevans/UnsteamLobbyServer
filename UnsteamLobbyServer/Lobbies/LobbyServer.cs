@@ -162,25 +162,25 @@ public partial class LobbyServer
 
             case DeleteLobbyData dld:
             {
-                _manager.DeleteLobbyData(dld.LobbyId, dld.Sender, dld.Key);
+                await _manager.DeleteLobbyData(dld.LobbyId, dld.Sender, dld.Key);
                 break;
             }
 
             case SetLobbyData sld:
             {
-                _manager.SetLobbyData(sld.LobbyId, sld.Sender, sld.Key, sld.Value);
+                await _manager.SetLobbyData(sld.LobbyId, sld.Sender, sld.Key, sld.Value);
                 break;
             }
 
             case SetLobbyMemberData slmd:
             {
-                _manager.SetLobbyMemberData(slmd.LobbyId, slmd.Sender, slmd.Key, slmd.Value);
+                await _manager.SetLobbyMemberData(slmd.LobbyId, slmd.Sender, slmd.Key, slmd.Value);
                 break;
             }
 
             case SetLobbyOwner slo:
             {
-                _manager.SetLobbyOwner(slo.LobbyId, slo.Sender, slo.NewOwner);
+                await _manager.SetLobbyOwner(slo.LobbyId, slo.Sender, slo.NewOwner);
                 break;
             }
         }
