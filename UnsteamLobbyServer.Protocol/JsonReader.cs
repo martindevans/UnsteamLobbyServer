@@ -1,6 +1,5 @@
 namespace UnsteamLobbyServer.Protocol;
 
-
 internal struct JsonReader
 {
     private readonly string _json;
