@@ -249,7 +249,7 @@ public class LobbyManager
     }
 
     #region events
-    public record LobbyDataUpdateEvent(ulong LobbyId, ulong MemberId, bool Success);
+    public record struct LobbyDataUpdateEvent(ulong LobbyId, ulong MemberId, bool Success);
     
     /// <summary>
     /// Update indicating a change to lobby chat participation
@@ -258,6 +258,6 @@ public class LobbyManager
     /// <param name="ChangedUserId">ID of user being changed</param>
     /// <param name="ChangingUserId">ID of user making change, may be different fro Changed if e.g. banning or kicking</param>
     /// <param name="state">The state being changed</param>
-    public record LobbyChatUpdateEvent(ulong LobbyId, ulong ChangedUserId, ulong ChangingUserId, ChatMemberStateChange State);
+    public record struct LobbyChatUpdateEvent(ulong LobbyId, ulong ChangedUserId, ulong ChangingUserId, ChatMemberStateChange State);
     #endregion
 }

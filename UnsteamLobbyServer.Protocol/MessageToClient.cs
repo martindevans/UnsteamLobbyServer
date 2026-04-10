@@ -48,6 +48,8 @@ public abstract record BaseWebsocketMessageToClient
             nameof(Pong) => Pong.DeserializeSelf(ref reader),
             nameof(LobbyCreated) => LobbyCreated.DeserializeSelf(ref reader),
             nameof(LobbyEnter) => LobbyEnter.DeserializeSelf(ref reader),
+            nameof(LobbyChatUpdate) => LobbyChatUpdate.DeserializeSelf(ref reader),
+            nameof(LobbyDataUpdate) => LobbyDataUpdate.DeserializeSelf(ref reader),
             _ => null
         };
     }
@@ -128,19 +130,64 @@ public record LobbyEnter(ulong LobbyId, bool Success)
 ///// <param name="ChatId"></param>
 //public record LobbyChatMessage(ulong LobbyId, ulong UserId, ChatType Type, uint ChatId, byte[] Data) : BaseWebsocketMessageToClient;
 
-///// <summary>
-///// Indicates that soemthing about the lobby chat has updated (e.g. user joined or left)
-///// </summary>
-///// <param name="LobbyId"></param>
-///// <param name="UserChangedId"></param>
-///// <param name="UserMakingChangeId"></param>
-///// <param name="State"></param>
-//public record LobbyChatUpdate(ulong LobbyId, ulong UserChangedId, ulong UserMakingChangeId, ChatMemberStateChange State) : BaseWebsocketMessageToClient;
+/// <summary>
+/// Indicates that soemthing about the lobby chat has updated (e.g. user joined or left)
+/// </summary>
+/// <param name="LobbyId"></param>
+/// <param name="UserChangedId"></param>
+/// <param name="UserMakingChangeId"></param>
+/// <param name="State"></param>
+public record LobbyChatUpdate(ulong LobbyId, ulong UserChangedId, ulong UserMakingChangeId, ChatMemberStateChange State)
+    : BaseWebsocketMessageToClient
+{
+    protected override void SerializeSelf(ref JsonWriter writer)
+    {
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(UserChangedId), UserChangedId);
+        writer.WriteProperty(nameof(UserMakingChangeId), UserMakingChangeId);
+        writer.WriteProperty(nameof(State), (int)State);
+    }
 
-///// <summary>
-///// Indicates that lobby data has updated
-///// </summary>
-///// <param name="LobbyId"></param>
-///// <param name="UserId">Either the ID of the user who the data was updated for, or the lobby ID if the lobby data was updated</param>
-///// <param name="Success"></param>
-//public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success) : BaseWebsocketMessageToClient;
+    internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(UserChangedId), out var userChanged))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(UserMakingChangeId), out var userMakingChange))
+            return null;
+        if (!reader.ReadPropertyInt32(nameof(UserMakingChangeId), out var state))
+            return null;
+
+        return new LobbyChatUpdate(lobbyId, userChanged, userMakingChange, (ChatMemberStateChange)state);
+    }
+}
+
+/// <summary>
+/// Indicates that lobby data has updated
+/// </summary>
+/// <param name="LobbyId"></param>
+/// <param name="UserId">Either the ID of the user who the data was updated for, or the lobby ID if the lobby data was updated</param>
+/// <param name="Success"></param>
+public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success)
+    : BaseWebsocketMessageToClient
+{
+    protected override void SerializeSelf(ref JsonWriter writer)
+    {
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(UserId), UserId);
+        writer.WriteProperty(nameof(Success), Success);
+    }
+
+    internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(UserId), out var userId))
+            return null;
+        if (!reader.ReadPropertyBool(nameof(Success), out var success))
+            return null;
+
+        return new LobbyDataUpdate(lobbyId, userId, success);
+    }
+}

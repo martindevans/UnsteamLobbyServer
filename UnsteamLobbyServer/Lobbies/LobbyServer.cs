@@ -17,10 +17,36 @@ public partial class LobbyServer
     public LobbyServer(ILogger<LobbyServer> logger)
     {
         _logger = logger;
+        
         _manager = new LobbyManager();
+        _manager.LobbyChatUpdate += HandleChatUpdateEvent;
+        _manager.LobbyDataUpdate += HandleDataUpdateEvent;
     }
 
     #region event handlers
+    private async ValueTask HandleChatUpdateEvent(LobbyManager.LobbyChatUpdateEvent @event)
+    {
+        await Broadcast(
+            new LobbyChatUpdate(
+                @event.LobbyId,
+                @event.ChangedUserId,
+                @event.ChangingUserId,
+                @event.State
+            )
+        );
+    }
+
+    private async ValueTask HandleDataUpdateEvent(LobbyManager.LobbyDataUpdateEvent @event)
+    {
+        await Broadcast(
+            new LobbyDataUpdate(
+                @event.LobbyId,
+                @event.MemberId,
+                @event.Success
+            )
+        );
+    }
+
     private async ValueTask Broadcast<TMessage>(TMessage message)
         where TMessage : BaseWebsocketMessageToClient
     {
