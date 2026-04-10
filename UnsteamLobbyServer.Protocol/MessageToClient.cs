@@ -9,20 +9,25 @@ public abstract record BaseWebsocketMessageToClient
     public string Serialize()
     {
         var builder = new StringBuilder();
-        builder.AppendLine("{");
-        
-        builder.AppendFormat("\"$type\": \"{0}\",", GetType().Name);
+        var writer = new JsonWriter(builder);
+
+        writer.WriteObjectStart();
         builder.AppendLine();
 
-        SerializeSelf(builder);
+        writer.WritePropertyName("$type");
+        writer.WriteString(GetType().Name);
+        writer.WriteComma();
         builder.AppendLine();
 
-        builder.Append("}");
+        SerializeSelf(ref writer);
+        builder.AppendLine();
+
+        writer.WriteObjectEnd();
 
         return builder.ToString();
     }
 
-    protected abstract void SerializeSelf(StringBuilder builder);
+    protected abstract void SerializeSelf(ref JsonWriter writer);
 
     public static BaseWebsocketMessageToClient? Deserialize(Stream json)
     {
@@ -63,9 +68,10 @@ public abstract record BaseWebsocketMessageToClient
 public record Pong(int ID)
     : BaseWebsocketMessageToClient
 {
-    protected override void SerializeSelf(StringBuilder builder)
+    protected override void SerializeSelf(ref JsonWriter writer)
     {
-        builder.AppendFormat("\"ID\": {0}", ID);
+        writer.WritePropertyName("ID");
+        writer.WriteInt32(ID);
     }
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
@@ -90,9 +96,10 @@ public record Pong(int ID)
 /// <param name="LobbyId"></param>
 public record LobbyCreated(ulong LobbyId) : BaseWebsocketMessageToClient
 {
-    protected override void SerializeSelf(StringBuilder builder)
+    protected override void SerializeSelf(ref JsonWriter writer)
     {
-        builder.AppendFormat("\"LobbyId\": {0}", LobbyId);
+        writer.WritePropertyName("LobbyId");
+        writer.WriteUInt64(LobbyId);
     }
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
@@ -117,11 +124,13 @@ public record LobbyCreated(ulong LobbyId) : BaseWebsocketMessageToClient
 /// <param name="LobbyId"></param>
 public record LobbyEnter(ulong LobbyId, bool Success) : BaseWebsocketMessageToClient
 {
-    protected override void SerializeSelf(StringBuilder builder)
+    protected override void SerializeSelf(ref JsonWriter writer)
     {
-        builder.AppendFormat("\"LobbyId\": {0},", LobbyId);
-        builder.AppendLine();
-        builder.AppendFormat("\"Success\": {0}", Success ? "true" : "false");
+        writer.WritePropertyName("LobbyId");
+        writer.WriteUInt64(LobbyId);
+        writer.WriteComma();
+        writer.WritePropertyName("Success");
+        writer.WriteBool(Success);
     }
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
