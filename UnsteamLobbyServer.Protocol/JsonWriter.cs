@@ -1,10 +1,12 @@
+using System.Text;
+
 namespace UnsteamLobbyServer.Protocol;
 
 public readonly struct JsonWriter
 {
-    private readonly System.Text.StringBuilder _builder;
+    private readonly StringBuilder _builder;
 
-    public JsonWriter(System.Text.StringBuilder builder)
+    public JsonWriter(StringBuilder builder)
     {
         _builder = builder;
     }
