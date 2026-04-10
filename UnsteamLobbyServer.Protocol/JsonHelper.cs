@@ -34,6 +34,18 @@ internal struct JsonReader
         _json = json;
     }
 
+    public JsonReader(Stream stream)
+    {
+        using var reader = new StreamReader(stream, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: -1, leaveOpen: true);
+        _json = reader.ReadToEnd();
+    }
+
+    private void SkipWhitespace()
+    {
+        while (_index < _json.Length && char.IsWhiteSpace(_json[_index]))
+            _index++;
+    }
+
     private bool TryReadCharacter(char character)
     {
         if (_index >= _json.Length || _json[_index] != character)
@@ -44,21 +56,25 @@ internal struct JsonReader
 
     public bool ReadObjectStart()
     {
+        SkipWhitespace();
         return TryReadCharacter('{');
     }
 
     public bool ReadEndObject()
     {
+        SkipWhitespace();
         return TryReadCharacter('}');
     }
 
     public bool ReadComma()
     {
+        SkipWhitespace();
         return TryReadCharacter(',');
     }
 
     public bool ReadPropertyName(string name)
     {
+        SkipWhitespace();
         if (!TryReadCharacter('"'))
             return false;
 
@@ -69,6 +85,7 @@ internal struct JsonReader
         if (!TryReadCharacter('"'))
             return false;
 
+        SkipWhitespace();
         if (!TryReadCharacter(':'))
             return false;
 
@@ -77,6 +94,7 @@ internal struct JsonReader
 
     public string? ReadString()
     {
+        SkipWhitespace();
         if (!TryReadCharacter('"'))
             return null;
 
@@ -98,6 +116,7 @@ internal struct JsonReader
 
     public string? ReadUnquotedValue()
     {
+        SkipWhitespace();
         var start = _index;
         while (_index < _json.Length && _json[_index] != ',' && _json[_index] != '}')
             _index++;
@@ -105,6 +124,6 @@ internal struct JsonReader
         if (_index == start)
             return null;
 
-        return _json[start.._index];
+        return _json[start.._index].TrimEnd();
     }
 }
