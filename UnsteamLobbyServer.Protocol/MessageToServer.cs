@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using UnsteamLobbyServer.Protocol.Json;
 
 namespace UnsteamLobbyServer.Protocol;
 
@@ -27,7 +28,7 @@ public abstract record BaseWebsocketMessageToServer
 
     protected abstract void SerializeSelf(ref JsonWriter writer);
 
-    public static BaseWebsocketMessageToServer? Deserialize(Stream json)
+    public static BaseWebsocketMessageToServer? Deserialize(ReadOnlyMemory<char> json)
     {
         var reader = new JsonReader(json);
 
@@ -47,6 +48,7 @@ public abstract record BaseWebsocketMessageToServer
             nameof(CreateLobby) => CreateLobby.DeserializeSelf(ref reader),
             nameof(JoinLobby) => JoinLobby.DeserializeSelf(ref reader),
             nameof(LeaveLobby) => LeaveLobby.DeserializeSelf(ref reader),
+            nameof(SetLobbyMemberLimit) => SetLobbyMemberLimit.DeserializeSelf(ref reader),
             _ => null
         };
     }
@@ -57,14 +59,12 @@ public record Ping(int ID)
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
-        writer.WritePropertyName("ID");
-        writer.WriteInt32(ID);
+        writer.WriteProperty(nameof(ID), ID);
     }
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadPropertyName("ID")
-         || !reader.ReadInt32(out var id))
+        if (!reader.ReadPropertyInt32(nameof(ID), out var id))
             return null;
 
         return new Ping(id);
@@ -76,30 +76,21 @@ public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembe
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
-        writer.WritePropertyName("Owner");
-        writer.WriteUInt64(Owner);
-        writer.WriteComma();
-        writer.WritePropertyName("Visibility");
-        writer.WriteString(Visibility.ToString());
-        writer.WriteComma();
-        writer.WritePropertyName("MaxMembers");
-        writer.WriteInt32(MaxMembers);
+        writer.WriteProperty(nameof(Owner), Owner);
+        writer.WriteProperty(nameof(Visibility), (int)Visibility);
+        writer.WriteProperty(nameof(MaxMembers), MaxMembers);
     }
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadPropertyName("Owner")
-         || !reader.ReadUInt64(out var owner)
-         || !reader.ReadComma()
-         || !reader.ReadPropertyName("Visibility")
-         || !reader.ReadString(out var visibilityStr)
-         || !Enum.TryParse<LobbyVisibility>(visibilityStr, out var visibility)
-         || !reader.ReadComma()
-         || !reader.ReadPropertyName("MaxMembers")
-         || !reader.ReadByte(out var maxMembers))
-             return null;
+        if (!reader.ReadPropertyUInt64(nameof(Owner), out var owner))
+            return null;
+        if (!reader.ReadPropertyInt32(nameof(Visibility), out var visibility))
+            return null;
+        if (!reader.ReadPropertyUInt8(nameof(MaxMembers), out var maxMembers))
+            return null;
 
-        return new CreateLobby(owner, visibility, maxMembers);
+        return new CreateLobby(owner, (LobbyVisibility)visibility, maxMembers);
     }
 }
 
@@ -108,21 +99,16 @@ public record JoinLobby(ulong LobbyId, ulong UserId)
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
-        writer.WritePropertyName("LobbyId");
-        writer.WriteUInt64(LobbyId);
-        writer.WriteComma();
-        writer.WritePropertyName("UserId");
-        writer.WriteUInt64(UserId);
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(UserId), UserId);
     }
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadPropertyName("LobbyId")
-         || !reader.ReadUInt64(out var lobbyId)
-         || !reader.ReadComma()
-         || !reader.ReadPropertyName("UserId")
-         || !reader.ReadUInt64(out var userId))
-             return null;
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(UserId), out var userId))
+            return null;
 
         return new JoinLobby(lobbyId, userId);
     }
@@ -133,22 +119,40 @@ public record LeaveLobby(ulong LobbyId, ulong UserId)
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
-        writer.WritePropertyName("LobbyId");
-        writer.WriteUInt64(LobbyId);
-        writer.WriteComma();
-        writer.WritePropertyName("UserId");
-        writer.WriteUInt64(UserId);
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(UserId), UserId);
     }
 
     internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadPropertyName("LobbyId")
-         || !reader.ReadUInt64(out var lobbyId)
-         || !reader.ReadComma()
-         || !reader.ReadPropertyName("UserId")
-         || !reader.ReadUInt64(out var userId))
-             return null;
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(UserId), out var userId))
+            return null;
 
         return new LeaveLobby(lobbyId, userId);
+    }
+}
+
+public record SetLobbyMemberLimit(ulong LobbyId, ulong Sender, int MaxMembers)
+    : BaseWebsocketMessageToServer
+{
+    protected override void SerializeSelf(ref JsonWriter writer)
+    {
+        writer.WriteProperty("LobbyId", LobbyId);
+        writer.WriteProperty("Sender", Sender);
+        writer.WriteProperty("MaxMembers", MaxMembers);
+    }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadPropertyUInt64("LobbyId", out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64("Sender", out var senderId))
+            return null;
+        if (!reader.ReadPropertyInt32("MaxMembers", out var maxMembers))
+            return null;
+
+        return new SetLobbyMemberLimit(lobbyId, senderId, maxMembers);
     }
 }

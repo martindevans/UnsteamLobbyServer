@@ -1,31 +1,30 @@
-namespace UnsteamLobbyServer.Protocol;
+namespace UnsteamLobbyServer.Protocol.Json;
 
 internal struct JsonReader
 {
-    private readonly string _json;
+    private readonly ReadOnlyMemory<char> _json;
     private int _index;
 
-    public JsonReader(string json)
+    public JsonReader(ReadOnlyMemory<char> json)
     {
         _json = json;
     }
 
-    public JsonReader(Stream stream)
-    {
-        using var reader = new StreamReader(stream, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: -1, leaveOpen: true);
-        _json = reader.ReadToEnd();
-    }
-
     private void SkipWhitespace()
     {
-        while (_index < _json.Length && char.IsWhiteSpace(_json[_index]))
+        var json = _json.Span;
+        
+        while (_index < json.Length && char.IsWhiteSpace(json[_index]))
             _index++;
     }
 
     private bool TryReadCharacter(char character)
     {
-        if (_index >= _json.Length || _json[_index] != character)
+        var json = _json.Span;
+
+        if (_index >= json.Length || json[_index] != character)
             return false;
+        
         _index++;
         return true;
     }
@@ -77,10 +76,11 @@ internal struct JsonReader
             return false;
         }
 
+        var json = _json.Span;
         var start = _index;
-        while (_index < _json.Length && _json[_index] != '"')
+        while (_index < _json.Length && json[_index] != '"')
         {
-            if (_json[_index] == '\\')
+            if (json[_index] == '\\')
                 _index++; // skip escaped character
             _index++;
         }
@@ -91,7 +91,7 @@ internal struct JsonReader
             return false;
         }
 
-        value = _json[start.._index];
+        value = new string(json[start.._index]);
         _index++; // consume closing quote
         return true;
     }
@@ -99,9 +99,10 @@ internal struct JsonReader
     public bool ReadUnquotedValue(out string value)
     {
         SkipWhitespace();
-        
+
+        var json = _json.Span;
         var start = _index;
-        while (_index < _json.Length && _json[_index] != ',' && _json[_index] != '}' && _json[_index] != ' ')
+        while (_index < _json.Length && json[_index] != ',' && json[_index] != '}' && json[_index] != ' ')
             _index++;
 
         if (_index == start)
@@ -110,7 +111,7 @@ internal struct JsonReader
             return true;
         }
 
-        value = _json[start.._index].TrimEnd();
+        value = new string(json[start.._index]).TrimEnd();
         return true;
     }
 
@@ -154,6 +155,75 @@ internal struct JsonReader
             value = default;
             return false;
         }
+
+        return true;
+    }
+
+
+    public bool ReadPropertyUInt64(string name, out ulong value)
+    {
+        if (!ReadPropertyName(name))
+        {
+            value = default;
+            return false;
+        }
+
+        if (!ReadUInt64(out value))
+            return false;
+        
+        if (!ReadComma())
+            return false;
+
+        return true;
+    }
+
+    public bool ReadPropertyInt32(string name, out int value)
+    {
+        if (!ReadPropertyName(name))
+        {
+            value = default;
+            return false;
+        }
+
+        if (!ReadInt32(out value))
+            return false;
+
+        if (!ReadComma())
+            return false;
+
+        return true;
+    }
+
+    public bool ReadPropertyUInt8(string name, out byte value)
+    {
+        if (!ReadPropertyName(name))
+        {
+            value = default;
+            return false;
+        }
+
+        if (!ReadByte(out value))
+            return false;
+
+        if (!ReadComma())
+            return false;
+
+        return true;
+    }
+
+    public bool ReadPropertyBool(string name, out bool value)
+    {
+        if (!ReadPropertyName(name))
+        {
+            value = default;
+            return false;
+        }
+
+        if (!ReadBool(out value))
+            return false;
+
+        if (!ReadComma())
+            return false;
 
         return true;
     }

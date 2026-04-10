@@ -35,34 +35,57 @@ public partial class LobbyServer
 
         try
         {
-            var buffer = new byte[1024];
+            // Read from socket into this buffer
+            var readBuffer = new byte[1024];
+
+            // Copy bytes into this buffer until a complete message
+            var messageBuffer = new byte[1024];
+            
+            // Convert bytes to chars in this buffer
+            var charsBuffer = new char[1024];
 
             while (websocket.State == WebSocketState.Open)
             {
-                using var ms = new MemoryStream();
+                // Accumulate the full message into messageBuffer
+                var messageBufferIndex = 0;
                 WebSocketReceiveResult result;
-
-                // Accumulate the full message into memorystream
                 do
                 {
-                    result = await websocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    // Receive some bytes
+                    result = await websocket.ReceiveAsync(new ArraySegment<byte>(readBuffer), CancellationToken.None);
 
+                    // Handle the closing event
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
                         await websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
                         return;
                     }
 
-                    ms.Write(buffer, 0, result.Count);
+                    // Grow message buffer if necessary
+                    if (messageBufferIndex + result.Count >= messageBuffer.Length)
+                        Array.Resize(ref messageBuffer, Math.Max(messageBuffer.Length * 2, messageBuffer.Length + result.Count));
+                    
+                    // Copy into message buffer
+                    readBuffer.AsSpan(0, result.Count).CopyTo(messageBuffer.AsSpan(messageBufferIndex));
+                    messageBufferIndex += result.Count;
                 }
                 while (!result.EndOfMessage);
 
-                // Prepare the data for processing
-                ms.Seek(0, SeekOrigin.Begin);
-
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    var message = BaseWebsocketMessageToServer.Deserialize(ms);
+                    // Get the bytes of the message we received
+                    var bytes = messageBuffer.AsSpan(0, messageBufferIndex);
+
+                    // Grow chars buffer if neccesary
+                    var charCount = Encoding.UTF8.GetCharCount(bytes);
+                    if (charCount > charsBuffer.Length)
+                        Array.Resize(ref charsBuffer, charCount);
+
+                    // Convert bytes to chars
+                    charCount = Encoding.UTF8.GetChars(bytes, charsBuffer);
+                    
+                    // Deserialize message
+                    var message = BaseWebsocketMessageToServer.Deserialize(charsBuffer.AsMemory(0, charCount));
                     if (message != null)
                         await HandleMessage(websocket, message);
                 }
@@ -105,6 +128,12 @@ public partial class LobbyServer
             case LeaveLobby ll:
             {
                 _manager.Leave(ll.LobbyId, ll.UserId);
+                break;
+            }
+
+            case SetLobbyMemberLimit slml:
+            {
+                _manager.SetLobbyMemberLimit(slml.LobbyId, slml.Sender, slml.MaxMembers);
                 break;
             }
         }

@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using System.Text;
+using UnsteamLobbyServer.Protocol.Json;
 
 namespace UnsteamLobbyServer.Protocol;
 
@@ -12,16 +13,13 @@ public abstract record BaseWebsocketMessageToClient
         var writer = new JsonWriter(builder);
 
         writer.WriteObjectStart();
-        builder.AppendLine();
+        {
+            writer.WritePropertyName("$type");
+            writer.WriteString(GetType().Name);
+            writer.WriteComma();
 
-        writer.WritePropertyName("$type");
-        writer.WriteString(GetType().Name);
-        writer.WriteComma();
-        builder.AppendLine();
-
-        SerializeSelf(ref writer);
-        builder.AppendLine();
-
+            SerializeSelf(ref writer);
+        }
         writer.WriteObjectEnd();
 
         return builder.ToString();
@@ -29,7 +27,7 @@ public abstract record BaseWebsocketMessageToClient
 
     protected abstract void SerializeSelf(ref JsonWriter writer);
 
-    public static BaseWebsocketMessageToClient? Deserialize(Stream json)
+    public static BaseWebsocketMessageToClient? Deserialize(ReadOnlyMemory<char> json)
     {
         var reader = new JsonReader(json);
 
@@ -64,14 +62,12 @@ public record Pong(int ID)
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
-        writer.WritePropertyName("ID");
-        writer.WriteInt32(ID);
+        writer.WriteProperty(nameof(ID), ID);
     }
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadPropertyName("ID")
-         || !reader.ReadInt32(out var id))
+        if (!reader.ReadPropertyInt32(nameof(ID), out var id))
             return null;
         
         return new Pong(id);
@@ -87,14 +83,12 @@ public record LobbyCreated(ulong LobbyId)
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
-        writer.WritePropertyName("LobbyId");
-        writer.WriteUInt64(LobbyId);
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
     }
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadPropertyName("LobbyId")
-         || !reader.ReadUInt64(out var lobbyId))
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
              return null;
 
         return new LobbyCreated(lobbyId);
@@ -110,21 +104,16 @@ public record LobbyEnter(ulong LobbyId, bool Success)
 {
     protected override void SerializeSelf(ref JsonWriter writer)
     {
-        writer.WritePropertyName("LobbyId");
-        writer.WriteUInt64(LobbyId);
-        writer.WriteComma();
-        writer.WritePropertyName("Success");
-        writer.WriteBool(Success);
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(Success), Success);
     }
 
     internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
     {
-        if (!reader.ReadPropertyName("LobbyId")
-         || !reader.ReadUInt64(out var lobbyId)
-         || !reader.ReadComma()
-         || !reader.ReadPropertyName("Success")
-         || !reader.ReadBool(out var success))
-             return null;
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyBool(nameof(Success), out var success))
+            return null;
 
         return new LobbyEnter(lobbyId, success);
     }

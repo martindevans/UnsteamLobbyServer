@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace UnsteamLobbyServer.Protocol;
+namespace UnsteamLobbyServer.Protocol.Json;
 
 public readonly struct JsonWriter
 {
@@ -45,6 +45,11 @@ public readonly struct JsonWriter
         _builder.Append('"');
     }
 
+    public void WriteUInt8(byte value)
+    {
+        _builder.Append(value);
+    }
+
     public void WriteInt32(int value)
     {
         _builder.Append(value);
@@ -58,5 +63,41 @@ public readonly struct JsonWriter
     public void WriteBool(bool value)
     {
         _builder.Append(value ? "true" : "false");
+    }
+
+
+    public void WriteProperty(string name, byte value)
+    {
+        WritePropertyName(name);
+        WriteUInt8(value);
+        WriteComma();
+    }
+
+    public void WriteProperty(string name, int value)
+    {
+        WritePropertyName(name);
+        WriteInt32(value);
+        WriteComma();
+    }
+
+    public void WriteProperty(string name, ulong value)
+    {
+        WritePropertyName(name);
+        WriteUInt64(value);
+        WriteComma();
+    }
+
+    public void WriteProperty(string name, bool value)
+    {
+        WritePropertyName(name);
+        WriteBool(value);
+        WriteComma();
+    }
+
+    public void WriteProperty(string name, string value)
+    {
+        WritePropertyName(name);
+        WriteString(value);
+        WriteComma();
     }
 }
