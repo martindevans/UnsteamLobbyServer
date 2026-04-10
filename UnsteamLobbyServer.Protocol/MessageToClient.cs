@@ -45,26 +45,10 @@ public abstract record BaseWebsocketMessageToClient
                 return Pong.DeserializeSelf(ref reader);
 
             case nameof(LobbyCreated):
-            {
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("LobbyId")) return null;
-                var lobbyIdStr = reader.ReadUnquotedValue();
-                if (lobbyIdStr == null || !ulong.TryParse(lobbyIdStr, out var lobbyId)) return null;
-                return new LobbyCreated(lobbyId);
-            }
+                return LobbyCreated.DeserializeSelf(ref reader);
 
             case nameof(LobbyEnter):
-            {
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("LobbyId")) return null;
-                var lobbyIdStr = reader.ReadUnquotedValue();
-                if (lobbyIdStr == null || !ulong.TryParse(lobbyIdStr, out var lobbyId)) return null;
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("Success")) return null;
-                var successStr = reader.ReadUnquotedValue();
-                if (successStr == null || !bool.TryParse(successStr, out var success)) return null;
-                return new LobbyEnter(lobbyId, success);
-            }
+                return LobbyEnter.DeserializeSelf(ref reader);
 
             default:
                 return null;
@@ -110,6 +94,21 @@ public record LobbyCreated(ulong LobbyId) : BaseWebsocketMessageToClient
     {
         builder.AppendFormat("\"LobbyId\": {0}", LobbyId);
     }
+
+    internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("LobbyId"))
+            return null;
+
+        var lobbyId = reader.ReadUInt64();
+        if (!lobbyId.HasValue)
+            return null;
+
+        return new LobbyCreated(lobbyId.Value);
+    }
 }
 
 /// <summary>
@@ -123,6 +122,31 @@ public record LobbyEnter(ulong LobbyId, bool Success) : BaseWebsocketMessageToCl
         builder.AppendFormat("\"LobbyId\": {0},", LobbyId);
         builder.AppendLine();
         builder.AppendFormat("\"Success\": {0}", Success ? "true" : "false");
+    }
+
+    internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("LobbyId"))
+            return null;
+
+        var lobbyId = reader.ReadUInt64();
+        if (!lobbyId.HasValue)
+            return null;
+
+        if (!reader.ReadComma())
+            return null;
+
+        if (!reader.ReadPropertyName("Success"))
+            return null;
+
+        var success = reader.ReadBool();
+        if (!success.HasValue)
+            return null;
+
+        return new LobbyEnter(lobbyId.Value, success.Value);
     }
 }
 

@@ -135,4 +135,22 @@ internal struct JsonReader
 
         return value;
     }
+
+    public ulong? ReadUInt64()
+    {
+        var str = ReadUnquotedValue();
+        if (str == null || !ulong.TryParse(str, out var value))
+            return null;
+
+        return value;
+    }
+
+    public bool? ReadBool()
+    {
+        var str = ReadUnquotedValue();
+        if (str == null || !bool.TryParse(str, out var value))
+            return null;
+
+        return value;
+    }
 }
