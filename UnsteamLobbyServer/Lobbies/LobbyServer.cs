@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.WebSockets;
-using System.Text;
+using HandySerialization.Wrappers;
 using UnsteamLobbyServer.Protocol;
 using Ping = UnsteamLobbyServer.Protocol.Ping;
 
@@ -50,11 +50,16 @@ public partial class LobbyServer
     private async ValueTask Broadcast<TMessage>(TMessage message)
         where TMessage : BaseWebsocketMessageToClient
     {
+        var ms = new MemoryStream();
+        var writer = new StreamByteWriter(ms);
+        message.Serialize(ref writer);
+        var bytes = ms.ToArray();
+
         foreach (var connection in _connections.Keys)
         {
             await connection.SendAsync(
-                Encoding.UTF8.GetBytes(message.Serialize()),
-                WebSocketMessageType.Text,
+                bytes,
+                WebSocketMessageType.Binary,
                 WebSocketMessageFlags.EndOfMessage,
                 CancellationToken.None
             );
@@ -84,9 +89,6 @@ public partial class LobbyServer
             // Copy bytes into this buffer until a complete message
             var messageBuffer = new byte[1024];
             
-            // Convert bytes to chars in this buffer
-            var charsBuffer = new char[1024];
-
             while (websocket.State == WebSocketState.Open)
             {
                 // Accumulate the full message into messageBuffer
@@ -114,21 +116,14 @@ public partial class LobbyServer
                 }
                 while (!result.EndOfMessage);
 
-                if (result.MessageType == WebSocketMessageType.Text)
+                if (result.MessageType == WebSocketMessageType.Binary)
                 {
                     // Get the bytes of the message we received
-                    var bytes = messageBuffer.AsSpan(0, messageBufferIndex);
+                    var bytes = messageBuffer.AsMemory(0, messageBufferIndex);
+                    var reader = new MemoryByteReader(bytes);
 
-                    // Grow chars buffer if neccesary
-                    var charCount = Encoding.UTF8.GetCharCount(bytes);
-                    if (charCount > charsBuffer.Length)
-                        Array.Resize(ref charsBuffer, charCount);
-
-                    // Convert bytes to chars
-                    charCount = Encoding.UTF8.GetChars(bytes, charsBuffer);
-                    
                     // Deserialize message
-                    var message = BaseWebsocketMessageToServer.Deserialize(charsBuffer.AsMemory(0, charCount));
+                    var message = BaseWebsocketMessageToServer.Deserialize(ref reader);
                     if (message != null)
                         await HandleMessage(websocket, message);
                 }
@@ -221,9 +216,14 @@ public partial class LobbyServer
         async ValueTask Reply<T>(T message)
             where T : BaseWebsocketMessageToClient
         {
+            var ms = new MemoryStream();
+            var writer = new StreamByteWriter(ms);
+            message.Serialize(ref writer);
+            var bytes = ms.ToArray();
+
             await socket.SendAsync(
-                Encoding.UTF8.GetBytes(message.Serialize()),
-                WebSocketMessageType.Text,
+                bytes,
+                WebSocketMessageType.Binary,
                 WebSocketMessageFlags.EndOfMessage,
                 cancellation
             );

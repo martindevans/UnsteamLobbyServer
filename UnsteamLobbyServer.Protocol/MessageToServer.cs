@@ -1,46 +1,24 @@
-﻿using System.Text;
-using UnsteamLobbyServer.Protocol.Json;
+﻿using HandySerialization;
+using HandySerialization.Extensions;
 
 namespace UnsteamLobbyServer.Protocol;
 
 public abstract record BaseWebsocketMessageToServer
 {
-    public string Serialize()
+    public void Serialize<TWriter>(ref TWriter writer)
+        where TWriter : struct, IByteWriter
     {
-        var builder = new StringBuilder();
-        var writer = new JsonWriter(builder);
-
-        writer.WriteObjectStart();
-        builder.AppendLine();
-
-        writer.WritePropertyName("$type");
-        writer.WriteString(GetType().Name);
-        writer.WriteComma();
-        builder.AppendLine();
-
+        writer.Write(GetType().Name);
         SerializeSelf(ref writer);
-        builder.AppendLine();
-
-        writer.WriteObjectEnd();
-
-        return builder.ToString();
     }
 
-    protected abstract void SerializeSelf(ref JsonWriter writer);
+    protected abstract void SerializeSelf<TWriter>(ref TWriter writer)
+        where TWriter : struct, IByteWriter;
 
-    public static BaseWebsocketMessageToServer? Deserialize(ReadOnlyMemory<char> json)
+    public static BaseWebsocketMessageToServer? Deserialize<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        var reader = new JsonReader(json);
-
-        if (!reader.ReadObjectStart())
-            return null;
-        if (!reader.ReadPropertyName("$type"))
-            return null;
-        if (!reader.ReadString(out var type))
-            return null;
-
-        if (!reader.ReadComma())
-            return null;
+        var type = reader.ReadString();
 
         return type switch
         {
@@ -54,6 +32,7 @@ public abstract record BaseWebsocketMessageToServer
             nameof(SetLobbyData) => SetLobbyData.DeserializeSelf(ref reader),
             nameof(SetLobbyMemberData) => SetLobbyMemberData.DeserializeSelf(ref reader),
             nameof(SetLobbyOwner) => SetLobbyOwner.DeserializeSelf(ref reader),
+            
             _ => null
         };
     }
@@ -62,223 +41,205 @@ public abstract record BaseWebsocketMessageToServer
 public record Ping(int ID)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(ID), ID);
+        writer.Write(ID);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyInt32(nameof(ID), out var id))
-            return null;
-
-        return new Ping(id);
+        return new Ping(
+            reader.ReadInt32()
+        );
     }
 }
 
 public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembers)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(Owner), Owner);
-        writer.WriteProperty(nameof(Visibility), (int)Visibility);
-        writer.WriteProperty(nameof(MaxMembers), MaxMembers);
+        writer.Write(Owner);
+        writer.Write((int)Visibility);
+        writer.Write(MaxMembers);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64(nameof(Owner), out var owner))
-            return null;
-        if (!reader.ReadPropertyInt32(nameof(Visibility), out var visibility))
-            return null;
-        if (!reader.ReadPropertyUInt8(nameof(MaxMembers), out var maxMembers))
-            return null;
-
-        return new CreateLobby(owner, (LobbyVisibility)visibility, maxMembers);
+        return new CreateLobby(
+            reader.ReadUInt64(),
+            (LobbyVisibility)reader.ReadInt32(),
+            reader.ReadUInt8()
+        );
     }
 }
 
 public record JoinLobby(ulong LobbyId, ulong UserId)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(LobbyId), LobbyId);
-        writer.WriteProperty(nameof(UserId), UserId);
+        writer.Write(LobbyId);
+        writer.Write(UserId);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
-            return null;
-        if (!reader.ReadPropertyUInt64(nameof(UserId), out var userId))
-            return null;
-
-        return new JoinLobby(lobbyId, userId);
+        return new JoinLobby(
+            reader.ReadUInt64(),
+            reader.ReadUInt64()
+        );
     }
 }
 
 public record LeaveLobby(ulong LobbyId, ulong UserId)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(LobbyId), LobbyId);
-        writer.WriteProperty(nameof(UserId), UserId);
+        writer.Write(LobbyId);
+        writer.Write(UserId);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
-            return null;
-        if (!reader.ReadPropertyUInt64(nameof(UserId), out var userId))
-            return null;
-
-        return new LeaveLobby(lobbyId, userId);
+        return new LeaveLobby(
+            reader.ReadUInt64(),
+            reader.ReadUInt64()
+        );
     }
 }
 
 public record SetLobbyMemberLimit(ulong LobbyId, ulong Sender, int MaxMembers)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty("LobbyId", LobbyId);
-        writer.WriteProperty("Sender", Sender);
-        writer.WriteProperty("MaxMembers", MaxMembers);
+       writer.Write(LobbyId);
+       writer.Write(Sender);
+       writer.Write(MaxMembers);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64("LobbyId", out var lobbyId))
-            return null;
-        if (!reader.ReadPropertyUInt64("Sender", out var senderId))
-            return null;
-        if (!reader.ReadPropertyInt32("MaxMembers", out var maxMembers))
-            return null;
-
-        return new SetLobbyMemberLimit(lobbyId, senderId, maxMembers);
+        return new SetLobbyMemberLimit(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadInt32()
+        );
     }
 }
 
 public record SetLobbyVisibility(ulong LobbyId, ulong Sender, LobbyVisibility Visibility)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(LobbyId), LobbyId);
-        writer.WriteProperty(nameof(Sender), Sender);
-        writer.WriteProperty(nameof(Visibility), (int)Visibility);
+        writer.Write(LobbyId);
+        writer.Write(Sender);
+        writer.Write((int)Visibility);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
-            return null;
-        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
-            return null;
-        if (!reader.ReadPropertyInt32(nameof(Visibility), out var visibility))
-            return null;
-
-        return new SetLobbyVisibility(lobbyId, sender, (LobbyVisibility)visibility);
+        return new SetLobbyVisibility(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            (LobbyVisibility)reader.ReadInt32()
+        );
     }
 }
 
 public record DeleteLobbyData(ulong LobbyId, ulong Sender, string Key)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(LobbyId), LobbyId);
-        writer.WriteProperty(nameof(Sender), Sender);
-        writer.WriteProperty(nameof(Key), Key);
+        writer.Write(LobbyId);
+        writer.Write(Sender);
+        writer.Write(Key);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
-            return null;
-        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
-            return null;
-        if (!reader.ReadPropertyString(nameof(Key), out var key))
-            return null;
-
-        return new DeleteLobbyData(lobbyId, sender, key);
+        return new DeleteLobbyData(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadString() ?? ""
+        );
     }
 }
 
 public record SetLobbyData(ulong LobbyId, ulong Sender, string Key, string Value)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(LobbyId), LobbyId);
-        writer.WriteProperty(nameof(Sender), Sender);
-        writer.WriteProperty(nameof(Key), Key);
-        writer.WriteProperty(nameof(Value), Value);
+        writer.Write(LobbyId);
+        writer.Write(Sender);
+        writer.Write(Key);
+        writer.Write(Value);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
-            return null;
-        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
-            return null;
-        if (!reader.ReadPropertyString(nameof(Key), out var key))
-            return null;
-        if (!reader.ReadPropertyString(nameof(Value), out var value))
-            return null;
-
-        return new SetLobbyData(lobbyId, sender, key, value);
+        return new SetLobbyData(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadString() ?? "",
+            reader.ReadString() ?? ""
+        );
     }
 }
 
 public record SetLobbyMemberData(ulong LobbyId, ulong Sender, string Key, string Value)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(LobbyId), LobbyId);
-        writer.WriteProperty(nameof(Sender), Sender);
-        writer.WriteProperty(nameof(Key), Key);
-        writer.WriteProperty(nameof(Value), Value);
+        writer.Write(LobbyId);
+        writer.Write(Sender);
+        writer.Write(Key);
+        writer.Write(Value);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
-            return null;
-        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
-            return null;
-        if (!reader.ReadPropertyString(nameof(Key), out var key))
-            return null;
-        if (!reader.ReadPropertyString(nameof(Value), out var value))
-            return null;
-
-        return new SetLobbyMemberData(lobbyId, sender, key, value);
+        return new SetLobbyMemberData(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadString() ?? "",
+            reader.ReadString() ?? ""
+        );
     }
 }
 
 public record SetLobbyOwner(ulong LobbyId, ulong Sender, ulong NewOwner)
     : BaseWebsocketMessageToServer
 {
-    protected override void SerializeSelf(ref JsonWriter writer)
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
-        writer.WriteProperty(nameof(LobbyId), LobbyId);
-        writer.WriteProperty(nameof(Sender), Sender);
-        writer.WriteProperty(nameof(NewOwner), NewOwner);
+        writer.Write(LobbyId);
+        writer.Write(Sender);
+        writer.Write(NewOwner);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
     {
-        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
-            return null;
-        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
-            return null;
-        if (!reader.ReadPropertyUInt64(nameof(NewOwner), out var newOwner))
-            return null;
-
-        return new SetLobbyOwner(lobbyId, sender, newOwner);
+        return new SetLobbyOwner(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadUInt64()
+        );
     }
 }
