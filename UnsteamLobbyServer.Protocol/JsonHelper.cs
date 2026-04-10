@@ -126,4 +126,13 @@ internal struct JsonReader
 
         return _json[start.._index].TrimEnd();
     }
+
+    public int? ReadInt32()
+    {
+        var str = ReadUnquotedValue();
+        if (str == null || !int.TryParse(str, out var value))
+            return null;
+
+        return value;
+    }
 }

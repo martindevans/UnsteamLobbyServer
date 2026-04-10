@@ -28,21 +28,21 @@ public abstract record BaseWebsocketMessageToClient
     {
         var reader = new JsonReader(json);
 
-        if (!reader.ReadObjectStart()) return null;
-        if (!reader.ReadPropertyName("$type")) return null;
+        // {
+        if (!reader.ReadObjectStart())
+            return null;
+        
+        // "$type": "whatever"
+        if (!reader.ReadPropertyName("$type"))
+            return null;
         var type = reader.ReadString();
-        if (type == null) return null;
+        if (type == null)
+            return null;
 
         switch (type)
         {
             case nameof(Pong):
-            {
-                if (!reader.ReadComma()) return null;
-                if (!reader.ReadPropertyName("ID")) return null;
-                var idStr = reader.ReadUnquotedValue();
-                if (idStr == null || !int.TryParse(idStr, out var id)) return null;
-                return new Pong(id);
-            }
+                return Pong.DeserializeSelf(ref reader);
 
             case nameof(LobbyCreated):
             {
@@ -76,11 +76,27 @@ public abstract record BaseWebsocketMessageToClient
 /// Response to a Ping message
 /// </summary>
 /// <param name="ID"></param>
-public record Pong(int ID) : BaseWebsocketMessageToClient
+public record Pong(int ID)
+    : BaseWebsocketMessageToClient
 {
     protected override void SerializeSelf(StringBuilder builder)
     {
         builder.AppendFormat("\"ID\": {0}", ID);
+    }
+
+    internal static BaseWebsocketMessageToClient? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadComma())
+            return null;
+        
+        if (!reader.ReadPropertyName("ID"))
+            return null;
+        
+        var id = reader.ReadInt32();
+        if (!id.HasValue)
+            return null;
+        
+        return new Pong(id.Value);
     }
 }
 
