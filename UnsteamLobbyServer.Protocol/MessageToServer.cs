@@ -49,6 +49,11 @@ public abstract record BaseWebsocketMessageToServer
             nameof(JoinLobby) => JoinLobby.DeserializeSelf(ref reader),
             nameof(LeaveLobby) => LeaveLobby.DeserializeSelf(ref reader),
             nameof(SetLobbyMemberLimit) => SetLobbyMemberLimit.DeserializeSelf(ref reader),
+            nameof(SetLobbyVisibility) => SetLobbyVisibility.DeserializeSelf(ref reader),
+            nameof(DeleteLobbyData) => DeleteLobbyData.DeserializeSelf(ref reader),
+            nameof(SetLobbyData) => SetLobbyData.DeserializeSelf(ref reader),
+            nameof(SetLobbyMemberData) => SetLobbyMemberData.DeserializeSelf(ref reader),
+            nameof(SetLobbyOwner) => SetLobbyOwner.DeserializeSelf(ref reader),
             _ => null
         };
     }
@@ -154,5 +159,126 @@ public record SetLobbyMemberLimit(ulong LobbyId, ulong Sender, int MaxMembers)
             return null;
 
         return new SetLobbyMemberLimit(lobbyId, senderId, maxMembers);
+    }
+}
+
+public record SetLobbyVisibility(ulong LobbyId, ulong Sender, LobbyVisibility Visibility)
+    : BaseWebsocketMessageToServer
+{
+    protected override void SerializeSelf(ref JsonWriter writer)
+    {
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(Sender), Sender);
+        writer.WriteProperty(nameof(Visibility), (int)Visibility);
+    }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
+            return null;
+        if (!reader.ReadPropertyInt32(nameof(Visibility), out var visibility))
+            return null;
+
+        return new SetLobbyVisibility(lobbyId, sender, (LobbyVisibility)visibility);
+    }
+}
+
+public record DeleteLobbyData(ulong LobbyId, ulong Sender, string Key)
+    : BaseWebsocketMessageToServer
+{
+    protected override void SerializeSelf(ref JsonWriter writer)
+    {
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(Sender), Sender);
+        writer.WriteProperty(nameof(Key), Key);
+    }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
+            return null;
+        if (!reader.ReadPropertyString(nameof(Key), out var key))
+            return null;
+
+        return new DeleteLobbyData(lobbyId, sender, key);
+    }
+}
+
+public record SetLobbyData(ulong LobbyId, ulong Sender, string Key, string Value)
+    : BaseWebsocketMessageToServer
+{
+    protected override void SerializeSelf(ref JsonWriter writer)
+    {
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(Sender), Sender);
+        writer.WriteProperty(nameof(Key), Key);
+        writer.WriteProperty(nameof(Value), Value);
+    }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
+            return null;
+        if (!reader.ReadPropertyString(nameof(Key), out var key))
+            return null;
+        if (!reader.ReadPropertyString(nameof(Value), out var value))
+            return null;
+
+        return new SetLobbyData(lobbyId, sender, key, value);
+    }
+}
+
+public record SetLobbyMemberData(ulong LobbyId, ulong Sender, string Key, string Value)
+    : BaseWebsocketMessageToServer
+{
+    protected override void SerializeSelf(ref JsonWriter writer)
+    {
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(Sender), Sender);
+        writer.WriteProperty(nameof(Key), Key);
+        writer.WriteProperty(nameof(Value), Value);
+    }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
+            return null;
+        if (!reader.ReadPropertyString(nameof(Key), out var key))
+            return null;
+        if (!reader.ReadPropertyString(nameof(Value), out var value))
+            return null;
+
+        return new SetLobbyMemberData(lobbyId, sender, key, value);
+    }
+}
+
+public record SetLobbyOwner(ulong LobbyId, ulong Sender, ulong NewOwner)
+    : BaseWebsocketMessageToServer
+{
+    protected override void SerializeSelf(ref JsonWriter writer)
+    {
+        writer.WriteProperty(nameof(LobbyId), LobbyId);
+        writer.WriteProperty(nameof(Sender), Sender);
+        writer.WriteProperty(nameof(NewOwner), NewOwner);
+    }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf(ref JsonReader reader)
+    {
+        if (!reader.ReadPropertyUInt64(nameof(LobbyId), out var lobbyId))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(Sender), out var sender))
+            return null;
+        if (!reader.ReadPropertyUInt64(nameof(NewOwner), out var newOwner))
+            return null;
+
+        return new SetLobbyOwner(lobbyId, sender, newOwner);
     }
 }

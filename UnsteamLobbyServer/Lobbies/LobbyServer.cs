@@ -136,6 +136,36 @@ public partial class LobbyServer
                 _manager.SetLobbyMemberLimit(slml.LobbyId, slml.Sender, slml.MaxMembers);
                 break;
             }
+
+            case SetLobbyVisibility slv:
+            {
+                _manager.SetLobbyVisibility(slv.LobbyId, slv.Sender, slv.Visibility);
+                break;
+            }
+
+            case DeleteLobbyData dld:
+            {
+                _manager.DeleteLobbyData(dld.LobbyId, dld.Sender, dld.Key);
+                break;
+            }
+
+            case SetLobbyData sld:
+            {
+                _manager.SetLobbyData(sld.LobbyId, sld.Sender, sld.Key, sld.Value);
+                break;
+            }
+
+            case SetLobbyMemberData slmd:
+            {
+                _manager.SetLobbyMemberData(slmd.LobbyId, slmd.Sender, slmd.Key, slmd.Value);
+                break;
+            }
+
+            case SetLobbyOwner slo:
+            {
+                _manager.SetLobbyOwner(slo.LobbyId, slo.Sender, slo.NewOwner);
+                break;
+            }
         }
 
         async ValueTask Reply<T>(T message)
