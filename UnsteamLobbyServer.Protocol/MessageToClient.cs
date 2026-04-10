@@ -26,28 +26,49 @@ public abstract record BaseWebsocketMessageToClient
 
     public static BaseWebsocketMessageToClient? Deserialize(Stream json)
     {
-        var fields = JsonHelper.ParseFields(json);
+        var reader = new JsonReader(json);
 
-        if (!fields.TryGetValue("$type", out var type))
-            return null;
+        if (!reader.ReadObjectStart()) return null;
+        if (!reader.ReadPropertyName("$type")) return null;
+        var type = reader.ReadString();
+        if (type == null) return null;
 
-        return type switch
+        switch (type)
         {
-            nameof(Pong) => new Pong(
-                int.Parse(fields["ID"])
-            ),
-            
-            nameof(LobbyCreated) => new LobbyCreated(
-                ulong.Parse(fields["LobbyId"])
-            ),
-            
-            nameof(LobbyEnter) => new LobbyEnter(
-                ulong.Parse(fields["LobbyId"]),
-                bool.Parse(fields["Success"])
-            ),
-            
-            _ => null
-        };
+            case nameof(Pong):
+            {
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("ID")) return null;
+                var idStr = reader.ReadUnquotedValue();
+                if (idStr == null || !int.TryParse(idStr, out var id)) return null;
+                return new Pong(id);
+            }
+
+            case nameof(LobbyCreated):
+            {
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("LobbyId")) return null;
+                var lobbyIdStr = reader.ReadUnquotedValue();
+                if (lobbyIdStr == null || !ulong.TryParse(lobbyIdStr, out var lobbyId)) return null;
+                return new LobbyCreated(lobbyId);
+            }
+
+            case nameof(LobbyEnter):
+            {
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("LobbyId")) return null;
+                var lobbyIdStr = reader.ReadUnquotedValue();
+                if (lobbyIdStr == null || !ulong.TryParse(lobbyIdStr, out var lobbyId)) return null;
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("Success")) return null;
+                var successStr = reader.ReadUnquotedValue();
+                if (successStr == null || !bool.TryParse(successStr, out var success)) return null;
+                return new LobbyEnter(lobbyId, success);
+            }
+
+            default:
+                return null;
+        }
     }
 }
 

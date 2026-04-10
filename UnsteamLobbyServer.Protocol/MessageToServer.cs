@@ -24,26 +24,70 @@ public abstract record BaseWebsocketMessageToServer
 
     public static BaseWebsocketMessageToServer? Deserialize(Stream json)
     {
-        var fields = JsonHelper.ParseFields(json);
+        var reader = new JsonReader(json);
 
-        if (!fields.TryGetValue("$type", out var type))
-            return null;
+        if (!reader.ReadObjectStart()) return null;
+        if (!reader.ReadPropertyName("$type")) return null;
+        var type = reader.ReadString();
+        if (type == null) return null;
 
-        return type switch
+        switch (type)
         {
-            nameof(Ping) => new Ping(int.Parse(fields["ID"])),
-            nameof(CreateLobby) => new CreateLobby(
-                ulong.Parse(fields["Owner"]),
-                System.Enum.Parse<LobbyVisibility>(fields["Visibility"]),
-                byte.Parse(fields["MaxMembers"])),
-            nameof(JoinLobby) => new JoinLobby(
-                ulong.Parse(fields["LobbyId"]),
-                ulong.Parse(fields["UserId"])),
-            nameof(LeaveLobby) => new LeaveLobby(
-                ulong.Parse(fields["LobbyId"]),
-                ulong.Parse(fields["UserId"])),
-            _ => null
-        };
+            case nameof(Ping):
+            {
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("ID")) return null;
+                var idStr = reader.ReadUnquotedValue();
+                if (idStr == null || !int.TryParse(idStr, out var id)) return null;
+                return new Ping(id);
+            }
+
+            case nameof(CreateLobby):
+            {
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("Owner")) return null;
+                var ownerStr = reader.ReadUnquotedValue();
+                if (ownerStr == null || !ulong.TryParse(ownerStr, out var owner)) return null;
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("Visibility")) return null;
+                var visibilityStr = reader.ReadString();
+                if (visibilityStr == null || !Enum.TryParse<LobbyVisibility>(visibilityStr, out var visibility)) return null;
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("MaxMembers")) return null;
+                var maxMembersStr = reader.ReadUnquotedValue();
+                if (maxMembersStr == null || !byte.TryParse(maxMembersStr, out var maxMembers)) return null;
+                return new CreateLobby(owner, visibility, maxMembers);
+            }
+
+            case nameof(JoinLobby):
+            {
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("LobbyId")) return null;
+                var lobbyIdStr = reader.ReadUnquotedValue();
+                if (lobbyIdStr == null || !ulong.TryParse(lobbyIdStr, out var lobbyId)) return null;
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("UserId")) return null;
+                var userIdStr = reader.ReadUnquotedValue();
+                if (userIdStr == null || !ulong.TryParse(userIdStr, out var userId)) return null;
+                return new JoinLobby(lobbyId, userId);
+            }
+
+            case nameof(LeaveLobby):
+            {
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("LobbyId")) return null;
+                var lobbyIdStr = reader.ReadUnquotedValue();
+                if (lobbyIdStr == null || !ulong.TryParse(lobbyIdStr, out var lobbyId)) return null;
+                if (!reader.ReadComma()) return null;
+                if (!reader.ReadPropertyName("UserId")) return null;
+                var userIdStr = reader.ReadUnquotedValue();
+                if (userIdStr == null || !ulong.TryParse(userIdStr, out var userId)) return null;
+                return new LeaveLobby(lobbyId, userId);
+            }
+
+            default:
+                return null;
+        }
     }
 }
 
