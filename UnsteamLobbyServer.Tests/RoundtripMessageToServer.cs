@@ -52,5 +52,45 @@ namespace UnsteamLobbyServer.Tests
             var deserialized = BaseWebsocketMessageToServer.Deserialize(original.Serialize().AsMemory());
             Assert.AreEqual(original, deserialized);
         }
+
+        [TestMethod]
+        public void SetLobbyVisibility_Roundtrip()
+        {
+            var original = new SetLobbyVisibility(LobbyId: 111222333UL, Sender: 444555666UL, Visibility: LobbyVisibility.Private);
+            var deserialized = BaseWebsocketMessageToServer.Deserialize(original.Serialize().AsMemory());
+            Assert.AreEqual(original, deserialized);
+        }
+
+        [TestMethod]
+        public void DeleteLobbyData_Roundtrip()
+        {
+            var original = new DeleteLobbyData(LobbyId: 111222333UL, Sender: 444555666UL, Key: "someKey");
+            var deserialized = BaseWebsocketMessageToServer.Deserialize(original.Serialize().AsMemory());
+            Assert.AreEqual(original, deserialized);
+        }
+
+        [TestMethod]
+        public void SetLobbyData_Roundtrip()
+        {
+            var original = new SetLobbyData(LobbyId: 111222333UL, Sender: 444555666UL, Key: "someKey", Value: "someValue");
+            var deserialized = BaseWebsocketMessageToServer.Deserialize(original.Serialize().AsMemory());
+            Assert.AreEqual(original, deserialized);
+        }
+
+        [TestMethod]
+        public void SetLobbyMemberData_Roundtrip()
+        {
+            var original = new SetLobbyMemberData(LobbyId: 111222333UL, Sender: 444555666UL, Key: "someKey", Value: "someValue");
+            var deserialized = BaseWebsocketMessageToServer.Deserialize(original.Serialize().AsMemory());
+            Assert.AreEqual(original, deserialized);
+        }
+
+        [TestMethod]
+        public void SetLobbyOwner_Roundtrip()
+        {
+            var original = new SetLobbyOwner(LobbyId: 111222333UL, Sender: 444555666UL, NewOwner: 777888999UL);
+            var deserialized = BaseWebsocketMessageToServer.Deserialize(original.Serialize().AsMemory());
+            Assert.AreEqual(original, deserialized);
+        }
     }
 }

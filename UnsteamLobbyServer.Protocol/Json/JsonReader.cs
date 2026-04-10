@@ -227,4 +227,21 @@ internal struct JsonReader
 
         return true;
     }
+
+    public bool ReadPropertyString(string name, out string value)
+    {
+        if (!ReadPropertyName(name))
+        {
+            value = default!;
+            return false;
+        }
+
+        if (!ReadString(out value))
+            return false;
+
+        if (!ReadComma())
+            return false;
+
+        return true;
+    }
 }
