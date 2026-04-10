@@ -4,3 +4,5 @@
 /UnsteamLobbyServer/obj
 /UnsteamLobbyServer.Protocol/bin
 /UnsteamLobbyServer.Protocol/obj
+/UnsteamLobbyServer.Tests/obj
+/UnsteamLobbyServer.Tests/bin

@@ -33,11 +33,19 @@ public abstract record BaseWebsocketMessageToClient
 
         return type switch
         {
-            nameof(Pong) => new Pong(int.Parse(fields["ID"])),
-            nameof(LobbyCreated) => new LobbyCreated(ulong.Parse(fields["LobbyId"])),
+            nameof(Pong) => new Pong(
+                int.Parse(fields["ID"])
+            ),
+            
+            nameof(LobbyCreated) => new LobbyCreated(
+                ulong.Parse(fields["LobbyId"])
+            ),
+            
             nameof(LobbyEnter) => new LobbyEnter(
                 ulong.Parse(fields["LobbyId"]),
-                bool.Parse(fields["Success"])),
+                bool.Parse(fields["Success"])
+            ),
+            
             _ => null
         };
     }

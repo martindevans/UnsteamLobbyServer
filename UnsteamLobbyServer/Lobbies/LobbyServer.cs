@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
-using System.Net.NetworkInformation;
 using System.Net.WebSockets;
-using System.Text.Json;
+using System.Text;
 using UnsteamLobbyServer.Protocol;
 using Ping = UnsteamLobbyServer.Protocol.Ping;
 
@@ -114,7 +113,7 @@ public partial class LobbyServer
             where T : BaseWebsocketMessageToClient
         {
             await socket.SendAsync(
-                message.Serialize(),
+                Encoding.UTF8.GetBytes(message.Serialize()),
                 WebSocketMessageType.Text,
                 WebSocketMessageFlags.EndOfMessage,
                 cancellation
