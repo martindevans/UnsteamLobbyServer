@@ -42,7 +42,9 @@ public partial class LobbyServer
             new LobbyDataUpdate(
                 @event.LobbyId,
                 @event.MemberId,
-                @event.Success
+                @event.Success,
+                @event.LobbyData,
+                @event.LobbyMemberData
             )
         );
     }
@@ -153,20 +155,18 @@ public partial class LobbyServer
             {
                 var id = await _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
                 await Reply(new LobbyCreated(id));
+                await Reply(new LobbyDataUpdate(id, id, true, [], []));
                 break;
             }
 
             case JoinLobby jl:
             {
                 var ok = await _manager.Join(jl.LobbyId, jl.UserId);
-                await Reply(
-                    new LobbyEnter(
-                        jl.LobbyId,
-                        ok,
-                        _manager.GetLobbyData(jl.LobbyId),
-                        _manager.GetLobbyMemberData(jl.LobbyId)
-                    )
-                );
+                
+                await Reply(new LobbyEnter(jl.LobbyId, ok, _manager.GetLobbyData(jl.LobbyId), _manager.GetLobbyMemberData(jl.LobbyId)));
+                if (ok)
+                    await Broadcast(new LobbyChatUpdate(jl.LobbyId, jl.UserId, jl.UserId, ChatMemberStateChange.Entered));
+                
                 break;
             }
 
@@ -209,6 +209,12 @@ public partial class LobbyServer
             case SetLobbyOwner slo:
             {
                 await _manager.SetLobbyOwner(slo.LobbyId, slo.Sender, slo.NewOwner);
+                break;
+            }
+
+            case SendLobbyChat slc:
+            {
+                await Broadcast(new LobbyChatMessage(slc.LobbyId, slc.Sender, slc.Message));
                 break;
             }
         }

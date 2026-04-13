@@ -36,9 +36,6 @@ public class LobbyManager
             _lobbies[lobbyId] = lobby;
         }
 
-        // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, lobbyId, true)) ?? ValueTask.CompletedTask);
-
         return lobbyId;
     }
 
@@ -54,14 +51,6 @@ public class LobbyManager
             // Join the lobby
             lobby.Join(userId);
         }
-
-        // Send events
-        await (LobbyChatUpdate?.Invoke(new LobbyChatUpdateEvent(
-            lobbyId,
-            userId,
-            userId,
-            ChatMemberStateChange.Entered
-        )) ?? ValueTask.CompletedTask);
 
         return true;
     }
@@ -133,6 +122,9 @@ public class LobbyManager
     
     public async ValueTask<bool> DeleteLobbyData(ulong lobbyId, ulong userId, string key)
     {
+        KeyValuePair<string, string>[] data;
+        KeyValuePair<(ulong, string), string>[] userData;
+
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
@@ -147,16 +139,22 @@ public class LobbyManager
 
             // Do the work
             lobby.DeleteLobbyData(key);
+
+            data = lobby.GetLobbyData().ToArray();
+            userData = lobby.GetLobbyMemberData().ToArray();
         }
 
         // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, lobbyId, true)) ?? ValueTask.CompletedTask);
+        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, lobbyId, true, data, userData)) ?? ValueTask.CompletedTask);
         
         return true;
     }
 
     public async ValueTask<bool> SetLobbyData(ulong lobbyId, ulong userId, string key, string value)
     {
+        KeyValuePair<string, string>[] data;
+        KeyValuePair<(ulong, string), string>[] userData;
+        
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
@@ -170,10 +168,13 @@ public class LobbyManager
 
             // Do the work
             lobby.SetLobbyData(key, value);
+
+            data = lobby.GetLobbyData().ToArray();
+            userData = lobby.GetLobbyMemberData().ToArray();
         }
 
         // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, lobbyId, true)) ?? ValueTask.CompletedTask);
+        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, lobbyId, true, data, userData)) ?? ValueTask.CompletedTask);
 
         return true;
     }
@@ -192,6 +193,9 @@ public class LobbyManager
     
     public async ValueTask<bool> SetLobbyMemberData(ulong lobbyId, ulong userId, string key, string value)
     {
+        KeyValuePair<string, string>[] data;
+        KeyValuePair<(ulong, string), string>[] userData;
+
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
@@ -202,10 +206,13 @@ public class LobbyManager
 
             // Do the work
             lobby.SetLobbyMemberData(userId, key, value);
+
+            data = lobby.GetLobbyData().ToArray();
+            userData = lobby.GetLobbyMemberData().ToArray();
         }
 
         // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, userId, true)) ?? ValueTask.CompletedTask);
+        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, userId, true, data, userData)) ?? ValueTask.CompletedTask);
 
         return true;
     }
@@ -224,6 +231,9 @@ public class LobbyManager
 
     public async ValueTask<bool> SetLobbyOwner(ulong lobbyId, ulong userId, ulong newOwnerId)
     {
+        KeyValuePair<string, string>[] data;
+        KeyValuePair<(ulong, string), string>[] userData;
+
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
@@ -240,24 +250,33 @@ public class LobbyManager
 
             // Do the work
             lobby.SetLobbyOwner(newOwnerId);
+
+            data = lobby.GetLobbyData().ToArray();
+            userData = lobby.GetLobbyMemberData().ToArray();
         }
 
         // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, userId, true)) ?? ValueTask.CompletedTask);
+        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, userId, true, data, userData)) ?? ValueTask.CompletedTask);
 
         return true;
     }
 
     #region events
-    public record struct LobbyDataUpdateEvent(ulong LobbyId, ulong MemberId, bool Success);
-    
+    public record struct LobbyDataUpdateEvent(
+        ulong LobbyId,
+        ulong MemberId,
+        bool Success,
+        IReadOnlyList<KeyValuePair<string, string>> LobbyData,
+        IReadOnlyList<KeyValuePair<(ulong, string), string>> LobbyMemberData
+    );
+
     /// <summary>
     /// Update indicating a change to lobby chat participation
     /// </summary>
     /// <param name="LobbyId">ID of lobby</param>
     /// <param name="ChangedUserId">ID of user being changed</param>
-    /// <param name="ChangingUserId">ID of user making change, may be different fro Changed if e.g. banning or kicking</param>
-    /// <param name="state">The state being changed</param>
+    /// <param name="ChangingUserId">ID of user making change, may be different from Changed if e.g. banning or kicking</param>
+    /// <param name="State">The state being changed</param>
     public record struct LobbyChatUpdateEvent(ulong LobbyId, ulong ChangedUserId, ulong ChangingUserId, ChatMemberStateChange State);
     #endregion
 }

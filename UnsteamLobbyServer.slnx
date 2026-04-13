@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="UnsteamLobbyClient/UnsteamLobbyClient.csproj" Id="5b3451b0-0de9-419b-8211-c3bce1042986" />
   <Project Path="UnsteamLobbyServer.Protocol/UnsteamLobbyServer.Protocol.csproj" />
   <Project Path="UnsteamLobbyServer.Tests/UnsteamLobbyServer.Tests.csproj" Id="53a2aa33-c7f5-4ccf-9716-3f117cecff76" />
   <Project Path="UnsteamLobbyServer/UnsteamLobbyServer.csproj" />

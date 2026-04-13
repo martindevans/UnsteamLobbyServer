@@ -8,6 +8,6 @@ var app = builder.Build();
 app.UseWebSockets();
 
 var lobbies = app.Services.GetRequiredService<LobbyServer>();
-app.MapGet("/connect-lobby", lobbies.Connect);
+app.MapGet("/connect", lobbies.Connect);
 
 app.Run();

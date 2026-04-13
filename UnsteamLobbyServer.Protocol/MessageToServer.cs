@@ -32,6 +32,7 @@ public abstract record BaseWebsocketMessageToServer
             nameof(SetLobbyData) => SetLobbyData.DeserializeSelf(ref reader),
             nameof(SetLobbyMemberData) => SetLobbyMemberData.DeserializeSelf(ref reader),
             nameof(SetLobbyOwner) => SetLobbyOwner.DeserializeSelf(ref reader),
+            nameof(SendLobbyChat) => SendLobbyChat.DeserializeSelf(ref reader),
             
             _ => null
         };
@@ -240,6 +241,27 @@ public record SetLobbyOwner(ulong LobbyId, ulong Sender, ulong NewOwner)
             reader.ReadUInt64(),
             reader.ReadUInt64(),
             reader.ReadUInt64()
+        );
+    }
+}
+
+public record SendLobbyChat(ulong LobbyId, ulong Sender, string Message)
+    : BaseWebsocketMessageToServer
+{
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
+    {
+        writer.Write(LobbyId);
+        writer.Write(Sender);
+        writer.Write(Message);
+    }
+
+    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
+    {
+        return new SendLobbyChat(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadString() ?? ""
         );
     }
 }
