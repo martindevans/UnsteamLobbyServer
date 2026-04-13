@@ -99,21 +99,45 @@ while (true)
 
 async Task SocketReceiveLoop()
 {
-    var buffer = new byte[4096];
+    var readBuffer = new byte[4096];
+    var messageBuffer = new byte[1024];
+
     while (socket.State == WebSocketState.Open)
     {
         try
         {
-            var result = await socket.ReceiveAsync(buffer, CancellationToken.None);
-            if (result.MessageType == WebSocketMessageType.Close)
-                break;
+            // Accumulate the full message into messageBuffer
+            var messageBufferIndex = 0;
+            WebSocketReceiveResult result;
+            do
+            {
+                // Receive some bytes
+                result = await socket.ReceiveAsync(new ArraySegment<byte>(readBuffer), CancellationToken.None);
 
-            if (result.MessageType == WebSocketMessageType.Binary)
-                await events.Writer.WriteAsync(new SocketData(buffer.AsMemory(0, result.Count).ToArray()));
+                // Handle the closing event
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+                    AnsiConsole.MarkupLineInterpolated($"[red]Websocket closed![/]");
+                    return;
+                }
+
+                // Grow message buffer if necessary
+                if (messageBufferIndex + result.Count >= messageBuffer.Length)
+                    Array.Resize(ref messageBuffer, Math.Max(messageBuffer.Length * 2, messageBuffer.Length + result.Count));
+
+                // Copy into message buffer
+                readBuffer.AsSpan(0, result.Count).CopyTo(messageBuffer.AsSpan(messageBufferIndex));
+                messageBufferIndex += result.Count;
+            }
+            while (!result.EndOfMessage);
+
+            // Copy complete message and enqueue processing event
+            await events.Writer.WriteAsync(new SocketData(messageBuffer.AsMemory(0, messageBufferIndex).ToArray()));
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLineInterpolated($"[red]Error receiving message: {ex.Message}[/]");
+            AnsiConsole.MarkupLineInterpolated($"[red]Error receiving message: {Markup.Escape(ex.Message)}[/]");
             break;
         }
     }
@@ -121,11 +145,19 @@ async Task SocketReceiveLoop()
 
 async Task EventProcessingLoop()
 {
-    LobbyData? lobbyData = null;
-    
-    while (true)
-        await foreach (var item in events.Reader.ReadAllAsync())
-            lobbyData = await item.Handle(socket, clientId, lobbyData);
+    try
+    {
+        LobbyData? lobbyData = null;
+        while (true)
+            await foreach (var item in events.Reader.ReadAllAsync())
+                lobbyData = await item.Handle(socket, clientId, lobbyData);
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLineInterpolated($"[red]Event Processing Loop Exception! {Markup.Escape(ex.Message)}[/]");
+    }
+
+    AnsiConsole.MarkupLineInterpolated($"[red]Event Processing Loop Exit![/]");
 }
 
 internal readonly struct LobbyData
@@ -203,7 +235,11 @@ internal record UserInputChat(string Message)
         if (!lobbyData.HasValue)
             return null;
 
-        throw new NotImplementedException();
+        await SocketHelpers.Send(
+            socket,
+            new SendLobbyChat(lobbyData.Value.ID, clientId, Message),
+            default
+        );
 
         return lobbyData;
     }
@@ -302,7 +338,11 @@ internal record SocketData(byte[] Data)
             case LobbyCreated lc:
             {
                 AnsiConsole.MarkupLineInterpolated($"[green]Lobby created with ID: {lc.LobbyId}[/]");
-                return new LobbyData(lc.LobbyId, new(), new());
+                return new LobbyData(
+                    lc.LobbyId,
+                    new(),
+                    new()
+                );
             }
 
             case LobbyEnter le:
@@ -310,7 +350,11 @@ internal record SocketData(byte[] Data)
                 if (le.Success)
                 {
                     AnsiConsole.MarkupLineInterpolated($"[green]Entered lobby {le.LobbyId}[/]");
-                    return new LobbyData(le.LobbyId, new(), new());
+                    return new LobbyData(
+                        le.LobbyId,
+                        le.LobbyData.ToDictionary(),
+                        le.LobbyMemberData.ToDictionary()
+                    );
                 }
 
                 AnsiConsole.MarkupLineInterpolated($"[red]Failed to enter lobby {le.LobbyId}[/]");
@@ -319,12 +363,18 @@ internal record SocketData(byte[] Data)
 
             case LobbyChatUpdate lcu:
             {
+                if (!lobbyData.HasValue || lcu.LobbyId != lobbyData?.ID)
+                    break;
+
                 AnsiConsole.MarkupLineInterpolated($"[yellow]Chat update in {lcu.LobbyId}: User {lcu.UserChangedId} is now {lcu.State}[/]");
                 break;
             }
 
             case LobbyDataUpdate ldu:
             {
+                if (!lobbyData.HasValue || ldu.LobbyId != lobbyData?.ID)
+                    break;
+
                 AnsiConsole.MarkupLineInterpolated($"[blue]Data update in {ldu.LobbyId} for {ldu.UserId} (Success: {ldu.Success})[/]");
                 return new LobbyData(
                     ldu.LobbyId,
@@ -333,6 +383,15 @@ internal record SocketData(byte[] Data)
                 );
             }
 
+            case LobbyChatMessage lcm:
+            {
+                if (!lobbyData.HasValue || lcm.LobbyId != lobbyData?.ID)
+                    break;
+                
+                AnsiConsole.MarkupLineInterpolated($"{lcm.UserId}: {Markup.Escape(lcm.Message)}");
+                break;
+            }
+            
             case Pong p:
             {
                 AnsiConsole.MarkupLineInterpolated($"[blue]Received Pong {p.ID}");

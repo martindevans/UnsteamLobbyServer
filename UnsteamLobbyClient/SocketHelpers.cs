@@ -18,33 +18,12 @@ public static class SocketHelpers
             try
             {
                 await socket.ConnectAsync(new Uri("ws://localhost:5030/connect"), cancellation);
-
-                // Send ping
-                var pingId = new Random().Next();
-                var ping = new Ping(pingId);
-                await Send(socket, ping, cancellation);
-
-                // Receive pong
-                var buffer = new byte[1024];
-                var result = await socket.ReceiveAsync(buffer, cancellation);
-                if (result.MessageType == WebSocketMessageType.Binary)
-                {
-                    var reader = new MemoryByteReader(buffer.AsMemory(0, result.Count));
-                    var response = BaseWebsocketMessageToClient.Deserialize(ref reader);
-                    if (response is Pong pong && pong.ID == pingId)
-                    {
-                        ctx.Status("[green]Connected.[/]");
-                        await Task.Delay(500, cancellation);
-                        return socket;
-                    }
-
-                    ctx.Status("[red]Failed to connect.[/]");
-                    await Task.Delay(1500, cancellation);
-                }
+                ctx.Status("[green]Connected.[/]");
+                return socket;
             }
             catch (Exception ex)
             {
-                ctx.Status($"[red]Exception connecting[/]: {ex.Message}");
+                ctx.Status($"[red]Exception connecting[/]: {Markup.Escape(ex.Message)}");
                 await Task.Delay(1500, cancellation);
             }
 

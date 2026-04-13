@@ -27,6 +27,7 @@ public abstract record BaseWebsocketMessageToClient
             nameof(LobbyEnter) => LobbyEnter.DeserializeSelf(ref reader),
             nameof(LobbyChatUpdate) => LobbyChatUpdate.DeserializeSelf(ref reader),
             nameof(LobbyDataUpdate) => LobbyDataUpdate.DeserializeSelf(ref reader),
+            nameof(LobbyChatMessage) => LobbyChatMessage.DeserializeSelf(ref reader),
             
             _ => null
         };
@@ -87,14 +88,14 @@ public record LobbyEnter(ulong LobbyId, bool Success, IReadOnlyList<KeyValuePair
         writer.Write(LobbyId);
         writer.Write(Convert.ToByte(Success));
         
-        writer.Write(LobbyData.Count);
+        writer.Write(checked((ushort)LobbyData.Count));
         foreach (var (key, value) in LobbyData)
         {
             writer.Write(key);
             writer.Write(value);
         }
         
-        writer.Write(LobbyMemberData.Count);
+        writer.Write(checked((ushort)LobbyMemberData.Count));
         foreach (var ((uid, key), value) in LobbyMemberData)
         {
             writer.Write(uid);
@@ -109,7 +110,7 @@ public record LobbyEnter(ulong LobbyId, bool Success, IReadOnlyList<KeyValuePair
         var lobbyId = reader.ReadUInt64();
         var success = Convert.ToBoolean(reader.ReadUInt8());
 
-        var lobbyData = new KeyValuePair<string, string>[reader.ReadInt32()];
+        var lobbyData = new KeyValuePair<string, string>[reader.ReadUInt16()];
         for (var i = 0; i < lobbyData.Length; i++)
         {
             lobbyData[i] = new KeyValuePair<string, string>(
@@ -118,7 +119,7 @@ public record LobbyEnter(ulong LobbyId, bool Success, IReadOnlyList<KeyValuePair
             );
         }
 
-        var lobbyMemberData = new KeyValuePair<(ulong, string), string>[reader.ReadInt32()];
+        var lobbyMemberData = new KeyValuePair<(ulong, string), string>[reader.ReadUInt16()];
         for (var i = 0; i < lobbyMemberData.Length; i++)
         {
             lobbyMemberData[i] = new KeyValuePair<(ulong, string), string>(
@@ -136,14 +137,32 @@ public record LobbyEnter(ulong LobbyId, bool Success, IReadOnlyList<KeyValuePair
     }
 }
 
-///// <summary>
-///// Indicates that a new chat message was sent in the lobby
-///// </summary>
-///// <param name="LobbyId"></param>
-///// <param name="UserId"></param>
-///// <param name="Type"></param>
-///// <param name="ChatId"></param>
-//public record LobbyChatMessage(ulong LobbyId, ulong UserId, ChatType Type, uint ChatId, byte[] Data) : BaseWebsocketMessageToClient;
+/// <summary>
+/// Indicates that a new chat message was sent in the lobby
+/// </summary>
+/// <param name="LobbyId"></param>
+/// <param name="UserId"></param>
+/// <param name="Message"></param>
+public record LobbyChatMessage(ulong LobbyId, ulong UserId, string Message)
+    : BaseWebsocketMessageToClient
+{
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
+    {
+        writer.Write(LobbyId);
+        writer.Write(UserId);
+        writer.Write(Message);
+    }
+
+    internal static LobbyChatMessage DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
+    {
+        return new LobbyChatMessage(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadString() ?? ""
+        );
+    }
+}
 
 /// <summary>
 /// Indicates that soemthing about the lobby chat has updated (e.g. user joined or left)
@@ -190,14 +209,14 @@ public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success, IReadOn
         writer.Write(UserId);
         writer.Write(Convert.ToByte(Success));
 
-        writer.Write(LobbyData.Count);
+        writer.Write(checked((ushort)LobbyData.Count));
         foreach (var (key, value) in LobbyData)
         {
             writer.Write(key);
             writer.Write(value);
         }
 
-        writer.Write(LobbyMemberData.Count);
+        writer.Write(checked((ushort)LobbyMemberData.Count));
         foreach (var ((uid, key), value) in LobbyMemberData)
         {
             writer.Write(uid);
@@ -213,7 +232,7 @@ public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success, IReadOn
         var userId = reader.ReadUInt64();
         var success = Convert.ToBoolean(reader.ReadUInt8());
 
-        var lobbyData = new KeyValuePair<string, string>[reader.ReadInt32()];
+        var lobbyData = new KeyValuePair<string, string>[reader.ReadUInt16()];
         for (var i = 0; i < lobbyData.Length; i++)
         {
             lobbyData[i] = new KeyValuePair<string, string>(
@@ -222,7 +241,7 @@ public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success, IReadOn
             );
         }
 
-        var lobbyMemberData = new KeyValuePair<(ulong, string), string>[reader.ReadInt32()];
+        var lobbyMemberData = new KeyValuePair<(ulong, string), string>[reader.ReadUInt16()];
         for (var i = 0; i < lobbyMemberData.Length; i++)
         {
             lobbyMemberData[i] = new KeyValuePair<(ulong, string), string>(

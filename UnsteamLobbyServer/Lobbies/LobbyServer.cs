@@ -211,6 +211,12 @@ public partial class LobbyServer
                 await _manager.SetLobbyOwner(slo.LobbyId, slo.Sender, slo.NewOwner);
                 break;
             }
+
+            case SendLobbyChat slc:
+            {
+                await Broadcast(new LobbyChatMessage(slc.LobbyId, slc.Sender, slc.Message));
+                break;
+            }
         }
 
         async ValueTask Reply<T>(T message)
