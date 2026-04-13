@@ -148,5 +148,16 @@ namespace UnsteamLobbyServer.Tests
 
             Assert.AreEqual(original, deserialized);
         }
+
+        [TestMethod]
+        public void SendLobbyChat_Roundtrip()
+        {
+            var original = new SendLobbyChat(99, 88, "hi");
+
+            var reader = SerializeToReader(original);
+            var deserialized = BaseWebsocketMessageToServer.Deserialize(ref reader);
+
+            Assert.AreEqual(original, deserialized);
+        }
     }
 }
