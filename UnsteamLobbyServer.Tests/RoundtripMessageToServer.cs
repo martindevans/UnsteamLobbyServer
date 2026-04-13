@@ -137,5 +137,16 @@ namespace UnsteamLobbyServer.Tests
             
             Assert.AreEqual(original, deserialized);
         }
+
+        [TestMethod]
+        public void SetLobbyMemberLimit_Roundtrip()
+        {
+            var original = new SetLobbyMemberLimit(99, 88, 77);
+
+            var reader = SerializeToReader(original);
+            var deserialized = BaseWebsocketMessageToServer.Deserialize(ref reader);
+
+            Assert.AreEqual(original, deserialized);
+        }
     }
 }

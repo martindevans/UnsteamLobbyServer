@@ -275,7 +275,7 @@ public class LobbyManager
     /// </summary>
     /// <param name="LobbyId">ID of lobby</param>
     /// <param name="ChangedUserId">ID of user being changed</param>
-    /// <param name="ChangingUserId">ID of user making change, may be different fro Changed if e.g. banning or kicking</param>
+    /// <param name="ChangingUserId">ID of user making change, may be different from Changed if e.g. banning or kicking</param>
     /// <param name="State">The state being changed</param>
     public record struct LobbyChatUpdateEvent(ulong LobbyId, ulong ChangedUserId, ulong ChangingUserId, ChatMemberStateChange State);
     #endregion
