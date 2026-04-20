@@ -44,6 +44,15 @@ public class LobbyManager
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
+            // MaxValue is a special key, that joins a lobby without specifying ID
+            // Steam doesn't provide something like this (obviously) but it's useful for testing
+            if (lobbyId == ulong.MaxValue)
+            {
+                if (_lobbies.Count == 0)
+                    return false;
+                lobbyId = _lobbies.Keys.First();
+            }
+            
             // Find lobby
             if (!_lobbies.TryGetValue(lobbyId, out var lobby))
                 return false;
@@ -82,6 +91,35 @@ public class LobbyManager
         return removed;
     }
 
+    private async ValueTask SendDataUpdateEvent(ulong lobbyId)
+    {
+        // Global lock on all lobby management operations
+        KeyValuePair<string, string>[] data;
+        KeyValuePair<(ulong, string), string>[] userData;
+        int memberCount;
+        int memberLimit;
+        using (_lock.EnterScope())
+        {
+            if (!_lobbies.TryGetValue(lobbyId, out var lobby))
+                return;
+
+            data = lobby.GetLobbyData().ToArray();
+            userData = lobby.GetLobbyMemberData().ToArray();
+            memberCount = lobby.Members.Count;
+            memberLimit = lobby.MaxMembers;
+        }
+
+        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(
+            lobbyId,
+            lobbyId,
+            true,
+            data,
+            userData,
+            memberCount,
+            memberLimit
+        )) ?? ValueTask.CompletedTask);
+    }
+    
     public bool SetLobbyMemberLimit(ulong lobbyId, ulong userId, int memberLimit)
     {
         // Global lock on all lobby management operations
@@ -122,9 +160,6 @@ public class LobbyManager
     
     public async ValueTask<bool> DeleteLobbyData(ulong lobbyId, ulong userId, string key)
     {
-        KeyValuePair<string, string>[] data;
-        KeyValuePair<(ulong, string), string>[] userData;
-
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
@@ -139,22 +174,16 @@ public class LobbyManager
 
             // Do the work
             lobby.DeleteLobbyData(key);
-
-            data = lobby.GetLobbyData().ToArray();
-            userData = lobby.GetLobbyMemberData().ToArray();
         }
 
         // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, lobbyId, true, data, userData)) ?? ValueTask.CompletedTask);
+        await SendDataUpdateEvent(lobbyId);
         
         return true;
     }
 
     public async ValueTask<bool> SetLobbyData(ulong lobbyId, ulong userId, string key, string value)
     {
-        KeyValuePair<string, string>[] data;
-        KeyValuePair<(ulong, string), string>[] userData;
-        
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
@@ -168,13 +197,10 @@ public class LobbyManager
 
             // Do the work
             lobby.SetLobbyData(key, value);
-
-            data = lobby.GetLobbyData().ToArray();
-            userData = lobby.GetLobbyMemberData().ToArray();
         }
 
         // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, lobbyId, true, data, userData)) ?? ValueTask.CompletedTask);
+        await SendDataUpdateEvent(lobbyId);
 
         return true;
     }
@@ -193,9 +219,6 @@ public class LobbyManager
     
     public async ValueTask<bool> SetLobbyMemberData(ulong lobbyId, ulong userId, string key, string value)
     {
-        KeyValuePair<string, string>[] data;
-        KeyValuePair<(ulong, string), string>[] userData;
-
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
@@ -206,13 +229,10 @@ public class LobbyManager
 
             // Do the work
             lobby.SetLobbyMemberData(userId, key, value);
-
-            data = lobby.GetLobbyData().ToArray();
-            userData = lobby.GetLobbyMemberData().ToArray();
         }
 
         // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, userId, true, data, userData)) ?? ValueTask.CompletedTask);
+        await SendDataUpdateEvent(lobbyId);
 
         return true;
     }
@@ -231,9 +251,6 @@ public class LobbyManager
 
     public async ValueTask<bool> SetLobbyOwner(ulong lobbyId, ulong userId, ulong newOwnerId)
     {
-        KeyValuePair<string, string>[] data;
-        KeyValuePair<(ulong, string), string>[] userData;
-
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
@@ -250,13 +267,10 @@ public class LobbyManager
 
             // Do the work
             lobby.SetLobbyOwner(newOwnerId);
-
-            data = lobby.GetLobbyData().ToArray();
-            userData = lobby.GetLobbyMemberData().ToArray();
         }
 
         // Raise events
-        await (LobbyDataUpdate?.Invoke(new LobbyDataUpdateEvent(lobbyId, userId, true, data, userData)) ?? ValueTask.CompletedTask);
+        await SendDataUpdateEvent(lobbyId);
 
         return true;
     }
@@ -267,7 +281,9 @@ public class LobbyManager
         ulong MemberId,
         bool Success,
         IReadOnlyList<KeyValuePair<string, string>> LobbyData,
-        IReadOnlyList<KeyValuePair<(ulong, string), string>> LobbyMemberData
+        IReadOnlyList<KeyValuePair<(ulong, string), string>> LobbyMemberData,
+        int MemberCount,
+        int MemberLimit
     );
 
     /// <summary>

@@ -13,7 +13,9 @@ public class Lobby
     private readonly Dictionary<ulong, Dictionary<string, string>> _lobbyMemberData = new();
     
     private LobbyVisibility _visibility;
+    
     private int _maxMembers;
+    public int MaxMembers => _maxMembers;
 
     public Lobby(ulong id, ulong owner)
     {

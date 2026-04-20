@@ -200,7 +200,15 @@ public record LobbyChatUpdate(ulong LobbyId, ulong UserChangedId, ulong UserMaki
 /// <param name="LobbyId"></param>
 /// <param name="UserId">Either the ID of the user who the data was updated for, or the lobby ID if the lobby data was updated</param>
 /// <param name="Success"></param>
-public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success, IReadOnlyList<KeyValuePair<string, string>> LobbyData, IReadOnlyList<KeyValuePair<(ulong, string), string>> LobbyMemberData)
+public record LobbyDataUpdate(
+    ulong LobbyId,
+    ulong UserId,
+    bool Success,
+    IReadOnlyList<KeyValuePair<string, string>> LobbyData,
+    IReadOnlyList<KeyValuePair<(ulong, string), string>> LobbyMemberData,
+    int MemberCount,
+    int MemberLimit
+)
     : BaseWebsocketMessageToClient
 {
     protected override void SerializeSelf<TWriter>(ref TWriter writer)
@@ -223,6 +231,9 @@ public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success, IReadOn
             writer.Write(key);
             writer.Write(value);
         }
+
+        writer.Write(MemberCount);
+        writer.Write(MemberLimit);
     }
 
     internal static LobbyDataUpdate DeserializeSelf<TReader>(ref TReader reader)
@@ -250,12 +261,17 @@ public record LobbyDataUpdate(ulong LobbyId, ulong UserId, bool Success, IReadOn
             );
         }
 
+        var memberCount = reader.ReadInt32();
+        var memberLimit = reader.ReadInt32();
+
         return new LobbyDataUpdate(
             lobbyId,
             userId,
             success,
             lobbyData,
-            lobbyMemberData
+            lobbyMemberData,
+            memberCount,
+            memberLimit
         );
     }
 }

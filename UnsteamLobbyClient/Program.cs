@@ -18,7 +18,7 @@ var clientId = unchecked((ulong)new Random().NextInt64());
 AnsiConsole.MarkupLineInterpolated($"Client ID: {clientId}");
 
 // Connect to server
-var socket = await SocketHelpers.Connect(default);
+var socket = await WebsocketHelpers.Connect(default);
 if (socket == null)
     return;
 
@@ -184,7 +184,7 @@ internal record UserInputHost
 {
     public override async Task<LobbyData?> Handle(ClientWebSocket socket, ulong clientId, LobbyData? lobbyData)
     {
-        await SocketHelpers.Send(
+        await WebsocketHelpers.Send(
             socket,
             new CreateLobby(clientId, LobbyVisibility.Public, 8),
             default
@@ -199,7 +199,7 @@ internal record UserInputJoin(ulong LobbyId)
 {
     public override async Task<LobbyData?> Handle(ClientWebSocket socket, ulong clientId, LobbyData? lobbyData)
     {
-        await SocketHelpers.Send(
+        await WebsocketHelpers.Send(
             socket,
             new JoinLobby(LobbyId, clientId),
             default
@@ -217,7 +217,7 @@ internal record UserInputLeave
         if (!lobbyData.HasValue)
             return null;
 
-        await SocketHelpers.Send(
+        await WebsocketHelpers.Send(
             socket,
             new LeaveLobby(lobbyData.Value.ID, clientId),
             default
@@ -235,7 +235,7 @@ internal record UserInputChat(string Message)
         if (!lobbyData.HasValue)
             return null;
 
-        await SocketHelpers.Send(
+        await WebsocketHelpers.Send(
             socket,
             new SendLobbyChat(lobbyData.Value.ID, clientId, Message),
             default
@@ -253,7 +253,7 @@ internal record UserInputSetLobbyData(string Key, string Value)
         if (!lobbyData.HasValue)
             return null;
 
-        await SocketHelpers.Send(
+        await WebsocketHelpers.Send(
             socket,
             new SetLobbyData(lobbyData.Value.ID, clientId, Key, Value),
             default
@@ -271,7 +271,7 @@ internal record UserInputSetMemberData(string Key, string Value)
         if (!lobbyData.HasValue)
             return null;
 
-        await SocketHelpers.Send(
+        await WebsocketHelpers.Send(
             socket,
             new SetLobbyMemberData(lobbyData.Value.ID, clientId, Key, Value),
             default
@@ -363,7 +363,7 @@ internal record SocketData(byte[] Data)
 
             case LobbyChatUpdate lcu:
             {
-                if (!lobbyData.HasValue || lcu.LobbyId != lobbyData?.ID)
+                if (!lobbyData.HasValue || lcu.LobbyId != lobbyData.Value.ID)
                     break;
 
                 AnsiConsole.MarkupLineInterpolated($"[yellow]Chat update in {lcu.LobbyId}: User {lcu.UserChangedId} is now {lcu.State}[/]");
@@ -372,7 +372,7 @@ internal record SocketData(byte[] Data)
 
             case LobbyDataUpdate ldu:
             {
-                if (!lobbyData.HasValue || ldu.LobbyId != lobbyData?.ID)
+                if (!lobbyData.HasValue || ldu.LobbyId != lobbyData.Value.ID)
                     break;
 
                 AnsiConsole.MarkupLineInterpolated($"[blue]Data update in {ldu.LobbyId} for {ldu.UserId} (Success: {ldu.Success})[/]");
@@ -385,7 +385,7 @@ internal record SocketData(byte[] Data)
 
             case LobbyChatMessage lcm:
             {
-                if (!lobbyData.HasValue || lcm.LobbyId != lobbyData?.ID)
+                if (!lobbyData.HasValue || lcm.LobbyId != lobbyData.Value.ID)
                     break;
                 
                 AnsiConsole.MarkupLineInterpolated($"{lcm.UserId}: {Markup.Escape(lcm.Message)}");

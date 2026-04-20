@@ -44,7 +44,9 @@ public partial class LobbyServer
                 @event.MemberId,
                 @event.Success,
                 @event.LobbyData,
-                @event.LobbyMemberData
+                @event.LobbyMemberData,
+                @event.MemberCount,
+                @event.MemberLimit
             )
         );
     }
@@ -90,7 +92,7 @@ public partial class LobbyServer
 
             // Copy bytes into this buffer until a complete message
             var messageBuffer = new byte[1024];
-            
+
             while (websocket.State == WebSocketState.Open)
             {
                 // Accumulate the full message into messageBuffer
@@ -111,12 +113,11 @@ public partial class LobbyServer
                     // Grow message buffer if necessary
                     if (messageBufferIndex + result.Count >= messageBuffer.Length)
                         Array.Resize(ref messageBuffer, Math.Max(messageBuffer.Length * 2, messageBuffer.Length + result.Count));
-                    
+
                     // Copy into message buffer
                     readBuffer.AsSpan(0, result.Count).CopyTo(messageBuffer.AsSpan(messageBufferIndex));
                     messageBufferIndex += result.Count;
-                }
-                while (!result.EndOfMessage);
+                } while (!result.EndOfMessage);
 
                 if (result.MessageType == WebSocketMessageType.Binary)
                 {
@@ -131,15 +132,27 @@ public partial class LobbyServer
                 }
             }
         }
+        catch (WebSocketException ex)
+        {
+            _logger.LogWarning("Websocket exception: {ex}", ex.WebSocketErrorCode);
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning("Websocket exception: {ex}", ex);
+            _logger.LogWarning("Exception: {ex}", ex);
         }
         finally
         {
             _connections.TryRemove(websocket, out _);
         }
     }
+
+    public async Task<string> List(HttpContext ctx)
+    {
+        _manager.
+        
+        return "Hello";
+    }
+
 
     private async Task HandleMessage(WebSocket socket, BaseWebsocketMessageToServer message, CancellationToken cancellation = default)
     {
@@ -155,7 +168,7 @@ public partial class LobbyServer
             {
                 var id = await _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
                 await Reply(new LobbyCreated(id));
-                await Reply(new LobbyDataUpdate(id, id, true, [], []));
+                await Reply(new LobbyDataUpdate(id, id, true, [], [], 1, cl.MaxMembers));
                 break;
             }
 

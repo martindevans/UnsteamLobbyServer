@@ -5,7 +5,7 @@ using UnsteamLobbyServer.Protocol;
 
 namespace UnsteamLobbyClient;
 
-public static class SocketHelpers
+public static class WebsocketHelpers
 {
     #region helpers
     public static async Task<ClientWebSocket?> Connect(CancellationToken cancellation)
