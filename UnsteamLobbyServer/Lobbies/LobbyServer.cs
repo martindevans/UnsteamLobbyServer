@@ -147,9 +147,7 @@ public partial class LobbyServer
     }
 
     public async Task<string> List(HttpContext ctx)
-    {
-        _manager.
-        
+    {        
         return "Hello";
     }
 
