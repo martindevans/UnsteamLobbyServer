@@ -9,6 +9,7 @@ app.UseWebSockets();
 
 var lobbies = app.Services.GetRequiredService<LobbyServer>();
 app.MapGet("/connect", lobbies.Connect);
-app.MapGet("/list", async ctx => await lobbies.List(ctx));
+app.MapGet("/list", async () => await lobbies.List());
+app.MapGet("/status", () => "ok");
 
 app.Run();

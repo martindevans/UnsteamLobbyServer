@@ -146,7 +146,7 @@ public partial class LobbyServer
         }
     }
 
-    public async Task<string> List(HttpContext ctx)
+    public async Task<string> List()
     {
         var lobbies = _manager.GetAllLobbies();
 
