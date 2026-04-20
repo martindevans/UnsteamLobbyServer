@@ -28,6 +28,7 @@ public abstract record BaseWebsocketMessageToClient
             nameof(LobbyChatUpdate) => LobbyChatUpdate.DeserializeSelf(ref reader),
             nameof(LobbyDataUpdate) => LobbyDataUpdate.DeserializeSelf(ref reader),
             nameof(LobbyChatMessage) => LobbyChatMessage.DeserializeSelf(ref reader),
+            nameof(LobbyList) => LobbyList.DeserializeSelf(ref reader),
             
             _ => null
         };
@@ -273,5 +274,80 @@ public record LobbyDataUpdate(
             memberCount,
             memberLimit
         );
+    }
+}
+
+/// <summary>
+/// A single lobby entry in the lobby list
+/// </summary>
+public record LobbyListEntry(
+    ulong LobbyId,
+    ulong Owner,
+    int MemberCount,
+    int MemberLimit,
+    LobbyVisibility Visibility,
+    IReadOnlyList<KeyValuePair<string, string>> LobbyData
+)
+{
+    internal void Serialize<TWriter>(ref TWriter writer)
+        where TWriter : struct, IByteWriter
+    {
+        writer.Write(LobbyId);
+        writer.Write(Owner);
+        writer.Write(MemberCount);
+        writer.Write(MemberLimit);
+        writer.Write((int)Visibility);
+
+        writer.Write(checked((ushort)LobbyData.Count));
+        foreach (var (key, value) in LobbyData)
+        {
+            writer.Write(key);
+            writer.Write(value);
+        }
+    }
+
+    internal static LobbyListEntry Deserialize<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
+    {
+        var lobbyId = reader.ReadUInt64();
+        var owner = reader.ReadUInt64();
+        var memberCount = reader.ReadInt32();
+        var memberLimit = reader.ReadInt32();
+        var visibility = (LobbyVisibility)reader.ReadInt32();
+
+        var lobbyData = new KeyValuePair<string, string>[reader.ReadUInt16()];
+        for (var i = 0; i < lobbyData.Length; i++)
+        {
+            lobbyData[i] = new KeyValuePair<string, string>(
+                reader.ReadString() ?? "",
+                reader.ReadString() ?? ""
+            );
+        }
+
+        return new LobbyListEntry(lobbyId, owner, memberCount, memberLimit, visibility, lobbyData);
+    }
+}
+
+/// <summary>
+/// Contains a snapshot of all current lobbies and their metadata (excluding per-member data)
+/// </summary>
+public record LobbyList(IReadOnlyList<LobbyListEntry> Lobbies)
+    : BaseWebsocketMessageToClient
+{
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
+    {
+        writer.Write(checked((ushort)Lobbies.Count));
+        foreach (var entry in Lobbies)
+            entry.Serialize(ref writer);
+    }
+
+    internal static LobbyList DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
+    {
+        var lobbies = new LobbyListEntry[reader.ReadUInt16()];
+        for (var i = 0; i < lobbies.Length; i++)
+            lobbies[i] = LobbyListEntry.Deserialize(ref reader);
+
+        return new LobbyList(lobbies);
     }
 }
