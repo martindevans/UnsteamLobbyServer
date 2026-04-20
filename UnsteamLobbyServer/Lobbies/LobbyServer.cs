@@ -147,8 +147,23 @@ public partial class LobbyServer
     }
 
     public async Task<string> List(HttpContext ctx)
-    {        
-        return "Hello";
+    {
+        var lobbies = _manager.GetAllLobbies();
+
+        var entries = lobbies.Select(l => new LobbyListEntry(
+            l.LobbyId,
+            l.Owner,
+            l.MemberCount,
+            l.MemberLimit,
+            l.Visibility,
+            l.LobbyData
+        )).ToArray();
+
+        using var ms = new MemoryStream();
+        var writer = new StreamByteWriter(ms);
+        new LobbyList(entries).Serialize(ref writer);
+
+        return Convert.ToBase64String(ms.ToArray());
     }
 
 

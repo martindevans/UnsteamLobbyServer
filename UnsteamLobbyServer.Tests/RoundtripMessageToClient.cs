@@ -114,7 +114,7 @@ public sealed class RoundtripMessageToClient
             new KeyValuePair<(ulong, string), string>((1ul, "A"), "B"),
             new KeyValuePair<(ulong, string), string>((2ul, "A"), "C"),
             new KeyValuePair<(ulong, string), string>((3ul, "B"), "A"),
-        ]);
+        ], 3, 10);
 
         var reader = SerializeToReader(original);
         var deserialized = (LobbyDataUpdate)BaseWebsocketMessageToClient.Deserialize(ref reader)!;
@@ -125,5 +125,48 @@ public sealed class RoundtripMessageToClient
         
         CollectionAssert.AreEqual(original.LobbyData.ToArray(), deserialized.LobbyData.ToArray());
         CollectionAssert.AreEqual(original.LobbyMemberData.ToArray(), deserialized.LobbyMemberData.ToArray());
+    }
+
+    [TestMethod]
+    public void LobbyList_Roundtrip()
+    {
+        var original = new LobbyList([
+            new LobbyListEntry(
+                LobbyId: 111222333UL,
+                Owner: 999888777UL,
+                MemberCount: 2,
+                MemberLimit: 8,
+                Visibility: LobbyVisibility.Public,
+                LobbyData: [
+                    new KeyValuePair<string, string>("map", "dust2"),
+                    new KeyValuePair<string, string>("mode", "tdm"),
+                ]
+            ),
+            new LobbyListEntry(
+                LobbyId: 444555666UL,
+                Owner: 123456789UL,
+                MemberCount: 1,
+                MemberLimit: 4,
+                Visibility: LobbyVisibility.Private,
+                LobbyData: []
+            ),
+        ]);
+
+        var reader = SerializeToReader(original);
+        var deserialized = (LobbyList?)BaseWebsocketMessageToClient.Deserialize(ref reader);
+        Assert.IsNotNull(deserialized);
+
+        Assert.HasCount(original.Lobbies.Count, deserialized.Lobbies);
+        for (var i = 0; i < original.Lobbies.Count; i++)
+        {
+            var o = original.Lobbies[i];
+            var d = deserialized.Lobbies[i];
+            Assert.AreEqual(o.LobbyId, d.LobbyId);
+            Assert.AreEqual(o.Owner, d.Owner);
+            Assert.AreEqual(o.MemberCount, d.MemberCount);
+            Assert.AreEqual(o.MemberLimit, d.MemberLimit);
+            Assert.AreEqual(o.Visibility, d.Visibility);
+            CollectionAssert.AreEqual(o.LobbyData.ToArray(), d.LobbyData.ToArray());
+        }
     }
 }

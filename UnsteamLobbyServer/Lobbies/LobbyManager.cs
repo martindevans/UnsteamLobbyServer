@@ -205,6 +205,21 @@ public class LobbyManager
         return true;
     }
 
+    public IReadOnlyList<LobbySnapshot> GetAllLobbies()
+    {
+        // Global lock on all lobby management operations
+        using var scope = _lock.EnterScope();
+
+        return _lobbies.Values.Select(lobby => new LobbySnapshot(
+            lobby.Id,
+            lobby.Owner,
+            lobby.Members.Count,
+            lobby.MaxMembers,
+            lobby.Visibility,
+            lobby.GetLobbyData().ToArray()
+        )).ToArray();
+    }
+
     public IReadOnlyList<KeyValuePair<string, string>> GetLobbyData(ulong lobbyId)
     {
         // Global lock on all lobby management operations
@@ -276,6 +291,15 @@ public class LobbyManager
     }
 
     #region events
+    public record struct LobbySnapshot(
+        ulong LobbyId,
+        ulong Owner,
+        int MemberCount,
+        int MemberLimit,
+        LobbyVisibility Visibility,
+        IReadOnlyList<KeyValuePair<string, string>> LobbyData
+    );
+
     public record struct LobbyDataUpdateEvent(
         ulong LobbyId,
         ulong MemberId,
