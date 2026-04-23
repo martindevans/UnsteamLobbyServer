@@ -36,7 +36,7 @@ while (true)
 {
     var prompt = new SelectionPrompt<string>()
                 .Title("Select an [green]action[/]:")
-                .AddChoices("Host", "Join", "Leave", "Chat", "SetData", "SetUserData", "DisplayData", "Exit")
+                .AddChoices("Host", "MassHost", "Join", "Leave", "Chat", "SetData", "SetUserData", "DisplayData", "Exit")
                 .HighlightStyle(Style.Plain);
     var choice = await AnsiConsole.PromptAsync(prompt);
     
@@ -48,6 +48,13 @@ while (true)
         case "Host":
         {
             await events.Writer.WriteAsync(new UserInputHost());
+            break;
+        }
+
+        case "MassHost":
+        {
+            var count = await AnsiConsole.PromptAsync(new TextPrompt<int>("How many lobbies?"));
+            await events.Writer.WriteAsync(new UserInputMassHost(count));
             break;
         }
 
@@ -189,6 +196,24 @@ internal record UserInputHost
             new CreateLobby(clientId, LobbyVisibility.Public, 8),
             default
         );
+        
+        return lobbyData;
+    }
+}
+
+internal record UserInputMassHost(int count)
+    : BaseQueueEvent
+{
+    public override async Task<LobbyData?> Handle(ClientWebSocket socket, ulong clientId, LobbyData? lobbyData)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            await WebsocketHelpers.Send(
+                socket,
+                new CreateLobby(clientId, LobbyVisibility.Public, 8),
+                default
+            );
+        }
         
         return lobbyData;
     }
