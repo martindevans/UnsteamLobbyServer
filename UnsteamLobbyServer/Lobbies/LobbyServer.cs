@@ -146,6 +146,61 @@ public partial class LobbyServer
         }
     }
 
+    public async Task Create(HttpContext ctx)
+    {
+        string? body;
+        using (var reader = new StreamReader(ctx.Request.Body))
+            body = await reader.ReadToEndAsync();
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsync("Request body must be a base64-encoded CreateLobby packet.");
+            return;
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(body);
+        }
+        catch (FormatException)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsync("Request body is not valid base64.");
+            return;
+        }
+
+        BaseWebsocketMessageToServer? message;
+        try
+        {
+            var mem = bytes.AsMemory();
+            var packetReader = new MemoryByteReader(mem);
+            message = BaseWebsocketMessageToServer.Deserialize(ref packetReader);
+        }
+        catch (Exception)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsync("Failed to deserialize packet.");
+            return;
+        }
+
+        if (message is not CreateLobby cl)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsync("Packet is not a CreateLobby message.");
+            return;
+        }
+
+        var id = await _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
+
+        using var ms = new MemoryStream();
+        var writer = new StreamByteWriter(ms);
+        new LobbyCreated(id).Serialize(ref writer);
+
+        await ctx.Response.WriteAsync(Convert.ToBase64String(ms.ToArray()));
+    }
+
     public async Task<string> List()
     {
         var lobbies = _manager.GetAllLobbies();
