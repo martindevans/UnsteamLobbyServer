@@ -150,7 +150,7 @@ public partial class LobbyServer
 
     public async Task Create(HttpContext ctx)
     {
-        // Read the entire body (based64 encoded data)
+        // Read the entire body (base64 encoded data)
         var body = await ctx.Request.Body.ReadStringToEndAsync();
         if (string.IsNullOrWhiteSpace(body))
         {
