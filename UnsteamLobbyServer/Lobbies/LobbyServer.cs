@@ -155,7 +155,7 @@ public partial class LobbyServer
         if (string.IsNullOrWhiteSpace(body))
         {
             ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsync("Request body must be a base64-encoded CreateLobby packet.");
+            await ctx.Response.WriteAsync("Request body must be a base64-encoded CreateLobby packet optionally followed by SetLobbyData packets.");
             return;
         }
 
@@ -171,12 +171,33 @@ public partial class LobbyServer
             return;
         }
 
-        BaseWebsocketMessageToServer? message;
+        CreateLobby cl;
+        var setDataMessages = new List<SetLobbyData>();
         try
         {
             var mem = bytes.AsMemory();
             var packetReader = new MemoryByteReader(mem);
-            message = BaseWebsocketMessageToServer.Deserialize(ref packetReader);
+
+            var first = BaseWebsocketMessageToServer.Deserialize(ref packetReader);
+            if (first is not CreateLobby createLobby)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await ctx.Response.WriteAsync("First packet is not a CreateLobby message.");
+                return;
+            }
+            cl = createLobby;
+
+            while (packetReader.UnreadBytes > 0)
+            {
+                var next = BaseWebsocketMessageToServer.Deserialize(ref packetReader);
+                if (next is not SetLobbyData sld)
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await ctx.Response.WriteAsync("Subsequent packets must be SetLobbyData messages.");
+                    return;
+                }
+                setDataMessages.Add(sld);
+            }
         }
         catch (Exception)
         {
@@ -185,14 +206,12 @@ public partial class LobbyServer
             return;
         }
 
-        if (message is not CreateLobby cl)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsync("Packet is not a CreateLobby message.");
-            return;
-        }
-
         var id = await _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
+
+        foreach (var sld in setDataMessages)
+        {
+            await _manager.SetLobbyData(id, cl.Owner, sld.Key, sld.Value);
+        }
 
         using var ms = new MemoryStream();
         var writer = new StreamByteWriter(ms);
