@@ -321,6 +321,25 @@ public partial class LobbyServer
                 break;
             }
 
+            case CreateLobby cl:
+            {
+                var id = await _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
+                await Reply(new LobbyCreated(id, new Dictionary<string, string>()));
+                await Reply(new LobbyDataUpdate(id, id, true, [], [], 1, cl.MaxMembers));
+                break;
+            }
+
+            case JoinLobby jl:
+            {
+                var ok = await _manager.Join(jl.LobbyId, jl.UserId);
+
+                await Reply(new LobbyEnter(jl.LobbyId, ok, _manager.GetLobbyData(jl.LobbyId), _manager.GetLobbyMemberData(jl.LobbyId)));
+                if (ok)
+                    await Broadcast(new LobbyChatUpdate(jl.LobbyId, jl.UserId, jl.UserId, ChatMemberStateChange.Entered));
+
+                break;
+            }
+
             case LeaveLobby ll:
             {
                 await _manager.Leave(ll.LobbyId, ll.UserId);
