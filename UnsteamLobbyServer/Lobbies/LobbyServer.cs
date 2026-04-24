@@ -3,7 +3,6 @@ using System.Net.WebSockets;
 using HandySerialization.Wrappers;
 using UnsteamLobbyServer.Extensions;
 using UnsteamLobbyServer.Protocol;
-using UnsteamLobbyServer.Protocol.Extensions;
 using Ping = UnsteamLobbyServer.Protocol.Ping;
 
 namespace UnsteamLobbyServer.Lobbies;
@@ -217,7 +216,10 @@ public partial class LobbyServer
         // Create the reply
         using var ms = new MemoryStream();
         var writer = new StreamByteWriter(ms);
-        new LobbyCreated(id).Serialize(ref writer);
+        new LobbyCreated(
+            id,
+            setDataMessages.ToDictionary(a => a.Key, a => a.Value)
+        ).Serialize(ref writer);
 
         // Send the reply
         await ctx.Response.WriteAsync(Convert.ToBase64String(ms.ToArray()));
@@ -251,14 +253,6 @@ public partial class LobbyServer
             case Ping p:
             {
                 await Reply(new Pong(p.ID));
-                break;
-            }
-
-            case CreateLobby cl:
-            {
-                var id = await _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
-                await Reply(new LobbyCreated(id));
-                await Reply(new LobbyDataUpdate(id, id, true, [], [], 1, cl.MaxMembers));
                 break;
             }
 
@@ -318,6 +312,12 @@ public partial class LobbyServer
             case SendLobbyChat slc:
             {
                 await Broadcast(new LobbyChatMessage(slc.LobbyId, slc.Sender, slc.Message));
+                break;
+            }
+
+            default:
+            {
+                _logger.LogWarning("Unknown packet type: {type}", message.GetType().Name);
                 break;
             }
         }

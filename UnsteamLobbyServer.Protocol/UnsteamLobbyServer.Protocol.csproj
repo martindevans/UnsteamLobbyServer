@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HandySerialization" Version="10.2.0" />
+    <PackageReference Include="HandySerialization" Version="10.4.0" />
   </ItemGroup>
 
 </Project>
