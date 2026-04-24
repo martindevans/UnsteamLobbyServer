@@ -143,7 +143,7 @@ public partial class LobbyServer
         }
         finally
         {
-            _connections.TryRemove(websocket, out _);
+            _connections.Remove(websocket, out _);
         }
     }
 
@@ -272,10 +272,6 @@ public partial class LobbyServer
         // Join the lobby
         var ok = await _manager.Join(jl.LobbyId, jl.UserId);
 
-        // Broadcast chat update if successful
-        if (ok)
-            await Broadcast(new LobbyChatUpdate(jl.LobbyId, jl.UserId, jl.UserId, ChatMemberStateChange.Entered));
-
         // Create the reply
         using var ms = new MemoryStream();
         var writer = new StreamByteWriter(ms);
@@ -288,6 +284,10 @@ public partial class LobbyServer
 
         // Send the reply
         await ctx.Response.WriteAsync(Convert.ToBase64String(ms.ToArray()));
+
+        // Broadcast chat update if successful
+        if (ok)
+            await Broadcast(new LobbyChatUpdate(jl.LobbyId, jl.UserId, jl.UserId, ChatMemberStateChange.Entered));
     }
 
     public async Task<string> List()
@@ -318,17 +318,6 @@ public partial class LobbyServer
             case Ping p:
             {
                 await Reply(new Pong(p.ID));
-                break;
-            }
-
-            case JoinLobby jl:
-            {
-                var ok = await _manager.Join(jl.LobbyId, jl.UserId);
-                
-                await Reply(new LobbyEnter(jl.LobbyId, ok, _manager.GetLobbyData(jl.LobbyId), _manager.GetLobbyMemberData(jl.LobbyId)));
-                if (ok)
-                    await Broadcast(new LobbyChatUpdate(jl.LobbyId, jl.UserId, jl.UserId, ChatMemberStateChange.Entered));
-                
                 break;
             }
 
