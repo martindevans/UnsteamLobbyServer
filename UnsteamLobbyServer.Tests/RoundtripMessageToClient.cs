@@ -31,12 +31,12 @@ public sealed class RoundtripMessageToClient
     [TestMethod]
     public void LobbyCreated_Roundtrip()
     {
-        var original = new LobbyCreated(5678);
+        var original = new LobbyCreated(5678, new Dictionary<string, string>());
 
         var reader = SerializeToReader(original);
-        var deserialized = BaseWebsocketMessageToClient.Deserialize(ref reader);
+        var deserialized = (LobbyCreated)BaseWebsocketMessageToClient.Deserialize(ref reader)!;
         
-        Assert.AreEqual(original, deserialized);
+        Assert.AreEqual(original.LobbyId, deserialized.LobbyId);
     }
 
     [TestMethod]

@@ -1,5 +1,6 @@
 ﻿using HandySerialization;
 using HandySerialization.Extensions;
+using HandySerialization.Extensions.Collections;
 
 namespace UnsteamLobbyServer.Protocol;
 
@@ -60,19 +61,21 @@ public record Pong(int ID)
 /// Indicates that a lobby with the given ID was created
 /// </summary>
 /// <param name="LobbyId"></param>
-public record LobbyCreated(ulong LobbyId)
+public record LobbyCreated(ulong LobbyId, IReadOnlyDictionary<string, string> Metadata)
     : BaseWebsocketMessageToClient
 {
     protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
         writer.Write(LobbyId);
+        writer.Write(Metadata, new StringAdapter(), new StringAdapter());
     }
 
     internal static LobbyCreated DeserializeSelf<TReader>(ref TReader reader)
         where TReader : struct, IByteReader
     {
         return new LobbyCreated(
-            reader.ReadUInt64()
+            reader.ReadUInt64(),
+            reader.ReadDictionary<TReader, string, StringAdapter, string, StringAdapter>()
         );
     }
 }

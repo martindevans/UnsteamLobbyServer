@@ -9,8 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="BalderHash" Version="2.1.0" />
-    <PackageReference Include="Spectre.Console" Version="0.55.0" />
-    <PackageReference Include="HandySerialization" Version="10.2.0" />
+    <PackageReference Include="Spectre.Console" Version="0.55.2" />
+    <PackageReference Include="HandySerialization" Version="10.4.0" />
   </ItemGroup>
 
   <ItemGroup>
