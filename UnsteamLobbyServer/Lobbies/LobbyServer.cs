@@ -225,6 +225,71 @@ public partial class LobbyServer
         await ctx.Response.WriteAsync(Convert.ToBase64String(ms.ToArray()));
     }
 
+    public async Task Join(HttpContext ctx)
+    {
+        // Read the entire body (base64 encoded data)
+        var body = await ctx.Request.Body.ReadStringToEndAsync();
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsync("Request body must be a base64-encoded JoinLobby packet.");
+            return;
+        }
+
+        // Create reader to read from byte data
+        MemoryByteReader packetReader;
+        try
+        {
+            packetReader = new MemoryByteReader(Convert.FromBase64String(body).AsMemory());
+        }
+        catch (FormatException)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsync("Request body is not valid base64.");
+            return;
+        }
+
+        // Deserialize the JoinLobby packet
+        JoinLobby jl;
+        try
+        {
+            var message = BaseWebsocketMessageToServer.Deserialize(ref packetReader);
+            if (message is not JoinLobby joinLobby)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await ctx.Response.WriteAsync("Packet is not a JoinLobby message.");
+                return;
+            }
+            jl = joinLobby;
+        }
+        catch (Exception ex)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsync($"Failed to deserialize packet: {ex.Message}");
+            return;
+        }
+
+        // Join the lobby
+        var ok = await _manager.Join(jl.LobbyId, jl.UserId);
+
+        // Broadcast chat update if successful
+        if (ok)
+            await Broadcast(new LobbyChatUpdate(jl.LobbyId, jl.UserId, jl.UserId, ChatMemberStateChange.Entered));
+
+        // Create the reply
+        using var ms = new MemoryStream();
+        var writer = new StreamByteWriter(ms);
+        new LobbyEnter(
+            jl.LobbyId,
+            ok,
+            _manager.GetLobbyData(jl.LobbyId),
+            _manager.GetLobbyMemberData(jl.LobbyId)
+        ).Serialize(ref writer);
+
+        // Send the reply
+        await ctx.Response.WriteAsync(Convert.ToBase64String(ms.ToArray()));
+    }
+
     public async Task<string> List()
     {
         var lobbies = _manager.GetAllLobbies();
