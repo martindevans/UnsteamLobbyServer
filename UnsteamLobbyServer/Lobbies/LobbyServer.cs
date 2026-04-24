@@ -173,7 +173,7 @@ public partial class LobbyServer
 
         // Read the data
         CreateLobby cl;
-        var setDataMessages = new List<SetLobbyData>();
+        var setDataMessages = new Dictionary<string, string>();
         try
         {
             // Read first packet, must be `CreateLobby`
@@ -196,7 +196,7 @@ public partial class LobbyServer
                     await ctx.Response.WriteAsync("Subsequent packets must be SetLobbyData messages.");
                     return;
                 }
-                setDataMessages.Add(sld);
+                setDataMessages.Add(sld.Key, sld.Value);
             }
         }
         catch (Exception)
@@ -218,7 +218,7 @@ public partial class LobbyServer
         var writer = new StreamByteWriter(ms);
         new LobbyCreated(
             id,
-            setDataMessages.ToDictionary(a => a.Key, a => a.Value)
+            setDataMessages
         ).Serialize(ref writer);
 
         // Send the reply
