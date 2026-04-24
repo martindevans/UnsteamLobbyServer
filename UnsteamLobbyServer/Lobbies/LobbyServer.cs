@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using HandySerialization.Wrappers;
+using UnsteamLobbyServer.Extensions;
 using UnsteamLobbyServer.Protocol;
 using UnsteamLobbyServer.Protocol.Extensions;
 using Ping = UnsteamLobbyServer.Protocol.Ping;
