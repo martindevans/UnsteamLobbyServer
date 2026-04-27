@@ -45,12 +45,12 @@ public sealed class RoundtripMessageToClient
         var original = new LobbyEnter(
             LobbyId: 333444555UL,
             Success: true,
-            new KeyValuePair<string, string>[]
+            LobbyData: new KeyValuePair<string, string>[]
             {
                 new("Hello", "World"),
                 new("Goodbye", "Planet"),
             },
-            new KeyValuePair<(ulong, string), string>[]
+            LobbyMemberData: new KeyValuePair<(ulong, string), string>[]
             {
                 new((1142, "Hello"), "World"),
                 new((46345354567, "Goodbye"), "Planet"),
@@ -70,7 +70,7 @@ public sealed class RoundtripMessageToClient
     [TestMethod]
     public void LobbyEnter_Failure_Roundtrip()
     {
-        var original = new LobbyEnter(LobbyId: 333444555UL, Success: false, [], []);
+        var original = new LobbyEnter(LobbyId: 333444555UL, Success: false, LobbyData: [], LobbyMemberData: []);
 
         var reader = SerializeToReader(original);
         var deserialized = (LobbyEnter?)BaseWebsocketMessageToClient.Deserialize(ref reader);

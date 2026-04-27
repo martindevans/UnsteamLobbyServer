@@ -85,7 +85,13 @@ public record LobbyCreated(ulong LobbyId, IReadOnlyDictionary<string, string> Me
 /// Indicates that the user receiving this message has entered a lobby with the given ID
 /// </summary>
 /// <param name="LobbyId"></param>
-public record LobbyEnter(ulong LobbyId, bool Success, IReadOnlyList<KeyValuePair<string, string>> LobbyData, IReadOnlyList<KeyValuePair<(ulong, string), string>> LobbyMemberData)
+public record LobbyEnter(
+    ulong LobbyId,
+    bool Success,
+    IReadOnlyList<KeyValuePair<string, string>> LobbyData,
+    IReadOnlyList<KeyValuePair<(ulong, string), string>> LobbyMemberData,
+    IReadOnlyList<ulong> LobbyMembers
+)
     : BaseWebsocketMessageToClient
 {
     protected override void SerializeSelf<TWriter>(ref TWriter writer)
@@ -107,6 +113,10 @@ public record LobbyEnter(ulong LobbyId, bool Success, IReadOnlyList<KeyValuePair
             writer.Write(key);
             writer.Write(value);
         }
+        
+        writer.Write(checked((ushort)LobbyMembers.Count));
+        foreach (var id in LobbyMembers)
+            writer.Write(id);
     }
 
     internal static LobbyEnter DeserializeSelf<TReader>(ref TReader reader)
@@ -133,11 +143,16 @@ public record LobbyEnter(ulong LobbyId, bool Success, IReadOnlyList<KeyValuePair
             );
         }
 
+        var lobbyMembers = new ulong[reader.ReadUInt16()];
+        for (var i = 0; i < lobbyMembers.Length; i++)
+            lobbyMembers[i] = reader.ReadUInt64();
+
         return new LobbyEnter(
             lobbyId,
             success,
             lobbyData,
-            lobbyMemberData
+            lobbyMemberData,
+            lobbyMembers
         );
     }
 }

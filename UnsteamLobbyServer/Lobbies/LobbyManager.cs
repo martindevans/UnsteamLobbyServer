@@ -264,6 +264,18 @@ public class LobbyManager
         return lobby.GetLobbyMemberData().ToArray();
     }
 
+    public IReadOnlyList<ulong> GetLobbyMembers(ulong lobbyId)
+    {
+        // Global lock on all lobby management operations
+        using var scope = _lock.EnterScope();
+
+        // Try to get the lobby
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby))
+            return [];
+
+        return lobby.GetLobbyMembers().ToArray();
+    }
+
     public async ValueTask<bool> SetLobbyOwner(ulong lobbyId, ulong userId, ulong newOwnerId)
     {
         // Global lock on all lobby management operations

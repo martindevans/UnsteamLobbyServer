@@ -11,6 +11,7 @@ public class Lobby
 
     private readonly Dictionary<string, string> _lobbyData = new();
     private readonly Dictionary<ulong, Dictionary<string, string>> _lobbyMemberData = new();
+    private readonly HashSet<ulong> _members = new();
     
     private LobbyVisibility _visibility;
     public LobbyVisibility Visibility => _visibility;
@@ -76,10 +77,17 @@ public class Lobby
     public void Join(ulong userId)
     {
         _lobbyMemberData.Add(userId, new Dictionary<string, string>());
+        _members.Add(userId);
     }
 
     public bool Leave(ulong userId)
     {
-        return _lobbyMemberData.Remove(userId);
+        _lobbyMemberData.Remove(userId);
+        return _members.Remove(userId);
+    }
+
+    public IReadOnlySet<ulong> GetLobbyMembers()
+    {
+        return _members;
     }
 }
