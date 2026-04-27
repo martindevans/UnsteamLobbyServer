@@ -264,7 +264,7 @@ public class LobbyManager
         if (!_lobbies.TryGetValue(lobbyId, out var lobby))
             return [];
 
-        return lobby.GetLobbyMembers().ToArray();
+        return lobby.Members.ToArray();
     }
 
     public async ValueTask<bool> SetLobbyOwner(ulong lobbyId, ulong userId, ulong newOwnerId)
