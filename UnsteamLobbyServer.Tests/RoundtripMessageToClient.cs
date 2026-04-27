@@ -45,15 +45,20 @@ public sealed class RoundtripMessageToClient
         var original = new LobbyEnter(
             LobbyId: 333444555UL,
             Success: true,
-            new KeyValuePair<string, string>[]
+            LobbyData: new KeyValuePair<string, string>[]
             {
                 new("Hello", "World"),
                 new("Goodbye", "Planet"),
             },
-            new KeyValuePair<(ulong, string), string>[]
+            LobbyMemberData: new KeyValuePair<(ulong, string), string>[]
             {
                 new((1142, "Hello"), "World"),
                 new((46345354567, "Goodbye"), "Planet"),
+            },
+            new List<ulong>()
+            {
+                3432876,
+                45698097
             }
         );
 
@@ -65,12 +70,13 @@ public sealed class RoundtripMessageToClient
         Assert.AreEqual(original.Success, deserialized.Success);
         CollectionAssert.AreEqual(original.LobbyData.ToArray(), deserialized.LobbyData.ToArray());
         CollectionAssert.AreEqual(original.LobbyMemberData.ToArray(), deserialized.LobbyMemberData.ToArray());
+        CollectionAssert.AreEqual(original.LobbyMembers.ToArray(), deserialized.LobbyMembers.ToArray());
     }
 
     [TestMethod]
     public void LobbyEnter_Failure_Roundtrip()
     {
-        var original = new LobbyEnter(LobbyId: 333444555UL, Success: false, [], []);
+        var original = new LobbyEnter(LobbyId: 333444555UL, Success: false, LobbyData: [], LobbyMemberData: [], LobbyMembers: []);
 
         var reader = SerializeToReader(original);
         var deserialized = (LobbyEnter?)BaseWebsocketMessageToClient.Deserialize(ref reader);
@@ -80,6 +86,7 @@ public sealed class RoundtripMessageToClient
         Assert.AreEqual(original.Success, deserialized.Success);
         CollectionAssert.AreEqual(original.LobbyData.ToArray(), deserialized.LobbyData.ToArray());
         CollectionAssert.AreEqual(original.LobbyMemberData.ToArray(), deserialized.LobbyMemberData.ToArray());
+        CollectionAssert.AreEqual(original.LobbyMembers.ToArray(), deserialized.LobbyMembers.ToArray());
     }
 
     [TestMethod]

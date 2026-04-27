@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using HandySerialization.Wrappers;
-using UnsteamLobbyServer.Extensions;
 using UnsteamLobbyServer.Protocol;
 using Ping = UnsteamLobbyServer.Protocol.Ping;
 
@@ -147,149 +146,6 @@ public partial class LobbyServer
         }
     }
 
-    public async Task Create(HttpContext ctx)
-    {
-        // Read the entire body (base64 encoded data)
-        var body = await ctx.Request.Body.ReadStringToEndAsync();
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsync("Request body must be a base64-encoded CreateLobby packet optionally followed by SetLobbyData packets.");
-            return;
-        }
-
-        // Create reader to read from byte data
-        MemoryByteReader packetReader;
-        try
-        {
-            packetReader = new MemoryByteReader(Convert.FromBase64String(body).AsMemory());
-        }
-        catch (FormatException)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsync("Request body is not valid base64.");
-            return;
-        }
-
-        // Read the data
-        CreateLobby cl;
-        var setDataMessages = new Dictionary<string, string>();
-        try
-        {
-            // Read first packet, must be `CreateLobby`
-            var first = BaseWebsocketMessageToServer.Deserialize(ref packetReader);
-            if (first is not CreateLobby createLobby)
-            {
-                ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await ctx.Response.WriteAsync("First packet is not a CreateLobby message.");
-                return;
-            }
-            cl = createLobby;
-
-            // Read all of the rest of the data, must be `SetLobbyData` packets back to back
-            while (packetReader.UnreadBytes > 0)
-            {
-                var next = BaseWebsocketMessageToServer.Deserialize(ref packetReader);
-                if (next is not SetLobbyData sld)
-                {
-                    ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await ctx.Response.WriteAsync("Subsequent packets must be SetLobbyData messages.");
-                    return;
-                }
-                setDataMessages.Add(sld.Key, sld.Value);
-            }
-        }
-        catch (Exception)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsync("Failed to deserialize packet.");
-            return;
-        }
-
-        // Create the lobby
-        var id = await _manager.Create(cl.Owner, cl.Visibility, cl.MaxMembers);
-
-        // Set the metadata
-        foreach (var sld in setDataMessages)
-            await _manager.SetLobbyData(id, cl.Owner, sld.Key, sld.Value);
-
-        // Create the reply
-        using var ms = new MemoryStream();
-        var writer = new StreamByteWriter(ms);
-        new LobbyCreated(
-            id,
-            setDataMessages
-        ).Serialize(ref writer);
-
-        // Send the reply
-        await ctx.Response.WriteAsync(Convert.ToBase64String(ms.ToArray()));
-    }
-
-    public async Task Join(HttpContext ctx)
-    {
-        // Read the entire body (base64 encoded data)
-        var body = await ctx.Request.Body.ReadStringToEndAsync();
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsync("Request body must be a base64-encoded JoinLobby packet.");
-            return;
-        }
-
-        // Create reader to read from byte data
-        MemoryByteReader packetReader;
-        try
-        {
-            packetReader = new MemoryByteReader(Convert.FromBase64String(body).AsMemory());
-        }
-        catch (FormatException)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsync("Request body is not valid base64.");
-            return;
-        }
-
-        // Deserialize the JoinLobby packet
-        JoinLobby jl;
-        try
-        {
-            var message = BaseWebsocketMessageToServer.Deserialize(ref packetReader);
-            if (message is not JoinLobby joinLobby)
-            {
-                ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await ctx.Response.WriteAsync("Packet is not a JoinLobby message.");
-                return;
-            }
-            jl = joinLobby;
-        }
-        catch (Exception ex)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsync($"Failed to deserialize packet: {ex.Message}");
-            return;
-        }
-
-        // Join the lobby
-        var ok = await _manager.Join(jl.LobbyId, jl.UserId);
-
-        // Create the reply
-        using var ms = new MemoryStream();
-        var writer = new StreamByteWriter(ms);
-        new LobbyEnter(
-            jl.LobbyId,
-            ok,
-            _manager.GetLobbyData(jl.LobbyId),
-            _manager.GetLobbyMemberData(jl.LobbyId)
-        ).Serialize(ref writer);
-
-        // Send the reply
-        await ctx.Response.WriteAsync(Convert.ToBase64String(ms.ToArray()));
-
-        // Broadcast chat update if successful
-        if (ok)
-            await Broadcast(new LobbyChatUpdate(jl.LobbyId, jl.UserId, jl.UserId, ChatMemberStateChange.Entered));
-    }
-
     public async Task<string> List()
     {
         var lobbies = _manager.GetAllLobbies();
@@ -333,7 +189,16 @@ public partial class LobbyServer
             {
                 var ok = await _manager.Join(jl.LobbyId, jl.UserId);
 
-                await Reply(new LobbyEnter(jl.LobbyId, ok, _manager.GetLobbyData(jl.LobbyId), _manager.GetLobbyMemberData(jl.LobbyId)));
+                await Reply(
+                    new LobbyEnter(
+                        jl.LobbyId,
+                        ok,
+                        _manager.GetLobbyData(jl.LobbyId),
+                        _manager.GetLobbyMemberData(jl.LobbyId),
+                        _manager.GetLobbyMembers(jl.LobbyId)
+                    )
+                );
+                
                 if (ok)
                     await Broadcast(new LobbyChatUpdate(jl.LobbyId, jl.UserId, jl.UserId, ChatMemberStateChange.Entered));
 

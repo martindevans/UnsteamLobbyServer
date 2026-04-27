@@ -44,15 +44,6 @@ public class LobbyManager
         // Global lock on all lobby management operations
         using (_lock.EnterScope())
         {
-            // MaxValue is a special key, that joins a lobby without specifying ID
-            // Steam doesn't provide something like this (obviously) but it's useful for testing
-            if (lobbyId == ulong.MaxValue)
-            {
-                if (_lobbies.Count == 0)
-                    return false;
-                lobbyId = _lobbies.Keys.First();
-            }
-            
             // Find lobby
             if (!_lobbies.TryGetValue(lobbyId, out var lobby))
                 return false;
@@ -262,6 +253,18 @@ public class LobbyManager
             return [];
 
         return lobby.GetLobbyMemberData().ToArray();
+    }
+
+    public IReadOnlyList<ulong> GetLobbyMembers(ulong lobbyId)
+    {
+        // Global lock on all lobby management operations
+        using var scope = _lock.EnterScope();
+
+        // Try to get the lobby
+        if (!_lobbies.TryGetValue(lobbyId, out var lobby))
+            return [];
+
+        return lobby.Members.ToArray();
     }
 
     public async ValueTask<bool> SetLobbyOwner(ulong lobbyId, ulong userId, ulong newOwnerId)
