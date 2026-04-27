@@ -54,6 +54,11 @@ public sealed class RoundtripMessageToClient
             {
                 new((1142, "Hello"), "World"),
                 new((46345354567, "Goodbye"), "Planet"),
+            },
+            new List<ulong>()
+            {
+                3432876,
+                45698097
             }
         );
 
@@ -70,7 +75,7 @@ public sealed class RoundtripMessageToClient
     [TestMethod]
     public void LobbyEnter_Failure_Roundtrip()
     {
-        var original = new LobbyEnter(LobbyId: 333444555UL, Success: false, LobbyData: [], LobbyMemberData: []);
+        var original = new LobbyEnter(LobbyId: 333444555UL, Success: false, LobbyData: [], LobbyMemberData: [], LobbyMembers: []);
 
         var reader = SerializeToReader(original);
         var deserialized = (LobbyEnter?)BaseWebsocketMessageToClient.Deserialize(ref reader);
