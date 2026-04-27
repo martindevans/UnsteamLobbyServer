@@ -1,4 +1,5 @@
 ﻿using HandySerialization;
+using HandySerialization.Adapters;
 using HandySerialization.Extensions;
 using HandySerialization.Extensions.Collections;
 
@@ -67,7 +68,7 @@ public record LobbyCreated(ulong LobbyId, IReadOnlyDictionary<string, string> Me
     protected override void SerializeSelf<TWriter>(ref TWriter writer)
     {
         writer.Write(LobbyId);
-        writer.Write(Metadata, new StringAdapter(), new StringAdapter());
+        writer.Write(Metadata, keyAdapter: new StringAdapter(), valAdapter: new StringAdapter());
     }
 
     internal static LobbyCreated DeserializeSelf<TReader>(ref TReader reader)
