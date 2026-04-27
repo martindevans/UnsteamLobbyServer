@@ -70,6 +70,7 @@ public sealed class RoundtripMessageToClient
         Assert.AreEqual(original.Success, deserialized.Success);
         CollectionAssert.AreEqual(original.LobbyData.ToArray(), deserialized.LobbyData.ToArray());
         CollectionAssert.AreEqual(original.LobbyMemberData.ToArray(), deserialized.LobbyMemberData.ToArray());
+        CollectionAssert.AreEqual(original.LobbyMembers.ToArray(), deserialized.LobbyMembers.ToArray());
     }
 
     [TestMethod]
@@ -85,6 +86,7 @@ public sealed class RoundtripMessageToClient
         Assert.AreEqual(original.Success, deserialized.Success);
         CollectionAssert.AreEqual(original.LobbyData.ToArray(), deserialized.LobbyData.ToArray());
         CollectionAssert.AreEqual(original.LobbyMemberData.ToArray(), deserialized.LobbyMemberData.ToArray());
+        CollectionAssert.AreEqual(original.LobbyMembers.ToArray(), deserialized.LobbyMembers.ToArray());
     }
 
     [TestMethod]
