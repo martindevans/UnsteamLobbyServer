@@ -33,6 +33,7 @@ public abstract record BaseWebsocketMessageToServer
             nameof(SetLobbyMemberData) => SetLobbyMemberData.DeserializeSelf(ref reader),
             nameof(SetLobbyOwner) => SetLobbyOwner.DeserializeSelf(ref reader),
             nameof(SendLobbyChat) => SendLobbyChat.DeserializeSelf(ref reader),
+            nameof(SetLobbyGameServer) => SetLobbyGameServer.DeserializeSelf(ref reader),
             
             _ => null
         };
@@ -47,7 +48,7 @@ public record Ping(int ID)
         writer.Write(ID);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
         where TReader : struct, IByteReader
     {
         return new Ping(
@@ -66,7 +67,7 @@ public record CreateLobby(ulong Owner, LobbyVisibility Visibility, byte MaxMembe
         writer.Write(MaxMembers);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
         where TReader : struct, IByteReader
     {
         return new CreateLobby(
@@ -105,7 +106,7 @@ public record LeaveLobby(ulong LobbyId, ulong UserId)
         writer.Write(UserId);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
         where TReader : struct, IByteReader
     {
         return new LeaveLobby(
@@ -189,7 +190,7 @@ public record SetLobbyData(ulong LobbyId, ulong Sender, string Key, string Value
         writer.Write(Value);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
         where TReader : struct, IByteReader
     {
         return new SetLobbyData(
@@ -212,7 +213,7 @@ public record SetLobbyMemberData(ulong LobbyId, ulong Sender, string Key, string
         writer.Write(Value);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
         where TReader : struct, IByteReader
     {
         return new SetLobbyMemberData(
@@ -234,7 +235,7 @@ public record SetLobbyOwner(ulong LobbyId, ulong Sender, ulong NewOwner)
         writer.Write(NewOwner);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
         where TReader : struct, IByteReader
     {
         return new SetLobbyOwner(
@@ -255,13 +256,36 @@ public record SendLobbyChat(ulong LobbyId, ulong Sender, string Message)
         writer.Write(Message);
     }
 
-    internal static BaseWebsocketMessageToServer? DeserializeSelf<TReader>(ref TReader reader)
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
         where TReader : struct, IByteReader
     {
         return new SendLobbyChat(
             reader.ReadUInt64(),
             reader.ReadUInt64(),
             reader.ReadString() ?? ""
+        );
+    }
+}
+
+public record SetLobbyGameServer(ulong LobbyId, ulong GameServerId, uint GameServerIP, ushort GameServerPort)
+    : BaseWebsocketMessageToServer
+{
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
+    {
+        writer.Write(LobbyId);
+        writer.Write(GameServerId);
+        writer.Write(GameServerIP);
+        writer.Write(GameServerPort);
+    }
+
+    internal static BaseWebsocketMessageToServer DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
+    {
+        return new SetLobbyGameServer(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadUInt32(),
+            reader.ReadUInt16()
         );
     }
 }

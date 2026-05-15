@@ -31,6 +31,7 @@ public abstract record BaseWebsocketMessageToClient
             nameof(LobbyDataUpdate) => LobbyDataUpdate.DeserializeSelf(ref reader),
             nameof(LobbyChatMessage) => LobbyChatMessage.DeserializeSelf(ref reader),
             nameof(LobbyList) => LobbyList.DeserializeSelf(ref reader),
+            nameof(LobbyGameServerSet) => LobbyGameServerSet.DeserializeSelf(ref reader),
             
             _ => null
         };
@@ -368,5 +369,31 @@ public record LobbyList(IReadOnlyList<LobbyListEntry> Lobbies)
             lobbies[i] = LobbyListEntry.Deserialize(ref reader);
 
         return new LobbyList(lobbies);
+    }
+}
+
+/// <summary>
+/// Indicates that the lobby host has started the game
+/// </summary>
+public record LobbyGameServerSet(ulong LobbyId, ulong GameServerId, uint GameServerIP, ushort GameServerPort)
+    : BaseWebsocketMessageToClient
+{
+    protected override void SerializeSelf<TWriter>(ref TWriter writer)
+    {
+        writer.Write(LobbyId);
+        writer.Write(GameServerId);
+        writer.Write(GameServerIP);
+        writer.Write(GameServerPort);
+    }
+
+    internal static LobbyGameServerSet DeserializeSelf<TReader>(ref TReader reader)
+        where TReader : struct, IByteReader
+    {
+        return new LobbyGameServerSet(
+            reader.ReadUInt64(),
+            reader.ReadUInt64(),
+            reader.ReadUInt32(),
+            reader.ReadUInt16()
+        );
     }
 }

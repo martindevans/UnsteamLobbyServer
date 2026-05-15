@@ -253,6 +253,13 @@ public partial class LobbyServer
                 break;
             }
 
+            case SetLobbyGameServer slgs:
+            {
+                await Broadcast(new LobbyGameServerSet(slgs.LobbyId, slgs.GameServerId, slgs.GameServerIP, slgs.GameServerPort));
+                break;
+            }
+
+
             default:
             {
                 _logger.LogWarning("Unknown packet type: {type}", message.GetType().Name);
