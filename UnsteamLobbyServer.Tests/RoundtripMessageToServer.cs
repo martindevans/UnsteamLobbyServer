@@ -159,5 +159,21 @@ namespace UnsteamLobbyServer.Tests
 
             Assert.AreEqual(original, deserialized);
         }
+
+        [TestMethod]
+        public void SetLobbyGameServer_Roundtrip()
+        {
+            var original = new SetLobbyGameServer(
+                LobbyId: 99,
+                GameServerId: 88,
+                GameServerIP: 77,
+                GameServerPort: 66
+            );
+
+            var reader = SerializeToReader(original);
+            var deserialized = BaseWebsocketMessageToServer.Deserialize(ref reader);
+
+            Assert.AreEqual(original, deserialized);
+        }
     }
 }

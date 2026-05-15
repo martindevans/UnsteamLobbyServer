@@ -176,4 +176,20 @@ public sealed class RoundtripMessageToClient
             CollectionAssert.AreEqual(o.LobbyData.ToArray(), d.LobbyData.ToArray());
         }
     }
+
+    [TestMethod]
+    public void LobbyGameServerSet_Roundtrip()
+    {
+        var original = new LobbyGameServerSet(
+            LobbyId: 99,
+            GameServerId: 88,
+            GameServerIP: 77,
+            GameServerPort: 66
+        );
+
+        var reader = SerializeToReader(original);
+        var deserialized = BaseWebsocketMessageToClient.Deserialize(ref reader);
+
+        Assert.AreEqual(original, deserialized);
+    }
 }
